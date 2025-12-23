@@ -1,0 +1,42 @@
+name: "Feature request"
+description: "Suggest an idea aligned with the MVP vision"
+labels: ["feature"]
+title: "[feat] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please ensure the proposal aligns with the MVP scope in `docs/overview.md`.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user/job-to-be-done problem does this feature address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the feature, UX, and constraints
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: Clearly fits MVP scope
+        - label: Might be better as an external module
+        - label: Probably a post-MVP or Gen-2 item
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact / metrics
+      description: How could we measure success?
+
+

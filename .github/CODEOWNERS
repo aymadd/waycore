@@ -1,0 +1,7 @@
+# Add GitHub usernames or teams to own paths. Example:
+# /device/services/core_daemon/  @your-team
+# /docs/                         @your-team
+
+* @dmitry-grechko
+
+

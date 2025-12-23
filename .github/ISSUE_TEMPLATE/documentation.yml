@@ -1,0 +1,19 @@
+name: "Documentation"
+description: "Docs change request (readme, guides, or in-repo docs)"
+labels: ["documentation"]
+title: "[docs] "
+body:
+  - type: textarea
+    id: change
+    attributes:
+      label: Proposed documentation change
+      description: What should be added/changed and where?
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to related issues/PRs/sections (e.g., `docs/overview.md`)
+
+

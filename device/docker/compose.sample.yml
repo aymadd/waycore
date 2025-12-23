@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  core-daemon:
+    # build: ../../services/core_daemon
+    image: ghcr.io/waycore/core-daemon:dev
+    command: ["sh", "-c", "echo stub core-daemon; sleep 3600"]
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks: [waycore]
+  module-manager:
+    # build: ../../services/module_manager
+    image: ghcr.io/waycore/module-manager:dev
+    command: ["sh", "-c", "echo stub module-manager; sleep 3600"]
+    networks: [waycore]
+  ai-service:
+    # build: ../../services/ai_service
+    image: ghcr.io/waycore/ai-service:dev
+    command: ["sh", "-c", "echo stub ai-service; sleep 3600"]
+    networks: [waycore]
+  comms-bridge:
+    # build: ../../services/comms_bridge
+    image: ghcr.io/waycore/comms-bridge:dev
+    command: ["sh", "-c", "echo stub comms-bridge; sleep 3600"]
+    networks: [waycore]
+  ui-app:
+    # build: ../../apps/ui
+    image: ghcr.io/waycore/ui-app:dev
+    command: ["sh", "-c", "echo stub ui-app; sleep 3600"]
+    networks: [waycore]
+networks:
+  waycore: {}
+
+

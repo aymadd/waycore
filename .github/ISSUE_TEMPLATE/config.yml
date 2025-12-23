@@ -1,0 +1,10 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security reports
+    url: hello@theservice.io
+    about: Please report security vulnerabilities as described in SECURITY.md
+  - name: Questions & Discussions
+    url: https://github.com/waycore-org/waycore/discussions
+    about: Ask usage questions and discuss ideas here
+
+
