@@ -9,6 +9,9 @@ SOS, power policy) to ensure reliability even when the UI is busy or rebooting.
 
 For the high-level vision and scope, see: `docs/overview.md`
 
+For a detailed software architecture overview, see:
+`docs/architecture/architecture.md`
+
 ## Highlights
 
 - Communications-first and modular by design
@@ -33,8 +36,9 @@ device/
   services/
     core_daemon/                # State machine, power policy, service + FastAPI
     module_manager/             # Module discovery/lifecycle service + FastAPI
-    ai_service/                 # inference endpoints (ONNX/TFLite/OpenCV)
+    ai_service/                 # On-device inference service (preproc, engine, REST, bus)
     comms_bridge/               # Radio manager, TAK gateway stub, service + FastAPI
+    data_logger/                # Async SQLite logger + REST for latest records
   drivers/
     mock/                       # Mock GPS, LoRa radio, sensor, module_port, power (registered in factory)
     real/                       # Real drivers (stubs added in later phases)
@@ -66,7 +70,7 @@ then custom PCB, and finally field testing.
 4. (Optional) Copy `device/docker/compose.sample.yml` to a local compose, and
    iterate on service stubs as code is added.
 
-## Current Status (Phases 0–6)
+## Current Status (Phases 0–8)
 
 - **Phase 0 (Foundation)**: Poetry, linters (ruff/black), type checking (mypy),
   CI workflows, repo structure, progress tracker.
@@ -82,10 +86,21 @@ then custom PCB, and finally field testing.
   FastAPI (`/health`, `/api/modules`), Dockerfile, compose integration.
 - **Phase 6 (Comms Bridge)**: Radio manager, TAK gateway stub, service, FastAPI
   (`/health`, `/api/radios`, `/api/send`), Dockerfile, compose integration.
+- **Phase 7 (AI Service)**: Preprocessing, inference engine with model runners
+  (MobileNetV3 stub, Phi3-mini stub), REST endpoints (`/api/inference`,
+  `/api/image/classify`, `/api/chat`), two-stage vision→LLM pipeline stub, model
+  registry/config, lazy loading, perf sanity tests; Dockerfile and compose
+  integration.
+- **Phase 8 (Data Logger)**: Async SQLite DB, logger service consuming bus
+  topics (comms, AI, system), REST endpoints for latest records, Dockerfile and
+  compose integration.
 
 ## How to Run (Dev)
 
 - Prereqs: Docker, Docker Compose, Python 3.11, Poetry.
+
+For a complete Docker quickstart and common workflows, see
+[Local run with Docker](docs/local_dev_docker.md).
 
 Run tests and quality checks:
 
@@ -106,7 +121,7 @@ Start infrastructure and services:
 
 ```bash
 docker-compose -f docker/compose/dev.yml up -d mqtt
-docker-compose -f docker/compose/dev.yml up -d --build core-daemon module-manager comms-bridge
+docker-compose -f docker/compose/dev.yml up -d --build core-daemon module-manager comms-bridge ai-service data-logger
 ```
 
 Health checks and basic API calls:
@@ -115,6 +130,8 @@ Health checks and basic API calls:
 curl http://localhost:8000/health          # core-daemon
 curl http://localhost:8001/health          # module-manager
 curl http://localhost:8003/health          # comms-bridge
+curl http://localhost:8010/health          # ai-service
+curl http://localhost:8002/health          # data-logger
 ```
 
 ## Service APIs (Dev)
@@ -130,6 +147,16 @@ curl http://localhost:8003/health          # comms-bridge
   - `GET /health`
   - `GET /api/radios`
   - `POST /api/send` (body: SendMessageRequest)
+- **AI Service (8010)**:
+  - `GET /health`
+  - `POST /api/inference` (body: AIInferenceRequest)
+  - `POST /api/image/classify` (body: {model_id?, input_data})
+  - `POST /api/chat` (body: {model_id?, question, context})
+- **Data Logger (8002)**:
+  - `GET /health`
+  - `GET /api/ai/latest?n=50`
+  - `GET /api/comms/latest?n=50`
+  - `GET /api/events/latest?n=50`
 
 ## Progress Tracking
 

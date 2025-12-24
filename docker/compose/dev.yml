@@ -57,6 +57,34 @@ services:
       - mqtt
     networks:
       - waycore-dev
+  data-logger:
+    build:
+      context: ../..
+      dockerfile: device/services/data_logger/Dockerfile
+    container_name: waycore-data-logger
+    environment:
+      - DATA_LOGGER_CONFIG=/app/device/services/data_logger/config/default.yaml
+    volumes:
+      - ../..:/workspace:ro
+    ports:
+      - "8002:8002"
+    depends_on:
+      - mqtt
+    networks:
+      - waycore-dev
+  ai-service:
+    build:
+      context: ../..
+      dockerfile: device/services/ai_service/Dockerfile
+    container_name: waycore-ai-service
+    environment:
+      - AI_SERVICE_CONFIG=/app/device/services/ai_service/config/default.yaml
+    ports:
+      - "8010:8010"
+    depends_on:
+      - mqtt
+    networks:
+      - waycore-dev
 
 networks:
   waycore-dev:

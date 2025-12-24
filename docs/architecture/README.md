@@ -10,3 +10,6 @@ This folder aggregates architecture references. For the authoritative plan, see 
 - `local_plan/06-testing-requirements.md`
 - `local_plan/07-ui-implementation-plan.md`
 - `local_plan/08-implementation-phases.md`
+
+For a consolidated software architecture overview, see:
+- `docs/architecture/architecture.md`

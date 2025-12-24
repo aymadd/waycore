@@ -1,0 +1,13 @@
+models:
+  mobilenetv3:
+    type: vision
+    runner: mobilenetv3
+    path: null
+  phi3-mini:
+    type: llm
+    runner: phi3-mini
+    path: null
+  vision-llm:
+    type: pipeline
+    runner: vision-llm
+    path: null
