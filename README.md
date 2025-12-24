@@ -9,6 +9,9 @@ SOS, power policy) to ensure reliability even when the UI is busy or rebooting.
 
 For the high-level vision and scope, see: `docs/overview.md`
 
+For IPC strategy across services, see:
+`local_plan/12-ipc-implementation-guide.md.md`
+
 For a detailed software architecture overview, see:
 `docs/architecture/architecture.md`
 
@@ -71,6 +74,12 @@ then custom PCB, and finally field testing.
    iterate on service stubs as code is added.
 
 ## Current Status (Phases 0–8)
+
+- Upcoming:
+  - **Phase 12 (IPC)**: Unix sockets for APIs, MQTT for events, optional shared
+    memory
+  - **Phase 13 (App Foundation)**, **Phase 14 (AI App)**, **Phase 15 (Maps
+    App)**
 
 - **Phase 0 (Foundation)**: Poetry, linters (ruff/black), type checking (mypy),
   CI workflows, repo structure, progress tracker.
