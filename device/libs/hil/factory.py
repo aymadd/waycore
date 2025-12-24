@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+from collections.abc import Mapping, MutableMapping
+from typing import Any, Callable, TypeVar
+
+from .interfaces.gps import IGPS
+from .interfaces.module_port import IModulePort
+from .interfaces.power import IPowerController
+from .interfaces.radio import IRadio
+from .interfaces.sensor import ISensor
+
+T = TypeVar("T")
+Creator = Callable[[Mapping[str, Any]], T]
+
+
+class DriverFactory:
+    """
+    Configuration-driven driver creation.
+    Concrete drivers should register themselves at import time.
+    """
+
+    _gps_creators: MutableMapping[str, Creator[IGPS]] = {}
+    _radio_creators: MutableMapping[str, Creator[IRadio]] = {}
+    _sensor_creators: MutableMapping[str, Creator[ISensor]] = {}
+    _module_port_creators: MutableMapping[str, Creator[IModulePort]] = {}
+    _power_creators: MutableMapping[str, Creator[IPowerController]] = {}
+
+    # Registration
+    @classmethod
+    def register_gps(cls, name: str, creator: Creator[IGPS]) -> None:
+        cls._gps_creators[name] = creator
+
+    @classmethod
+    def register_radio(cls, name: str, creator: Creator[IRadio]) -> None:
+        cls._radio_creators[name] = creator
+
+    @classmethod
+    def register_sensor(cls, name: str, creator: Creator[ISensor]) -> None:
+        cls._sensor_creators[name] = creator
+
+    @classmethod
+    def register_module_port(cls, name: str, creator: Creator[IModulePort]) -> None:
+        cls._module_port_creators[name] = creator
+
+    @classmethod
+    def register_power(cls, name: str, creator: Creator[IPowerController]) -> None:
+        cls._power_creators[name] = creator
+
+    # Creation
+    @classmethod
+    def create_gps(cls, name: str, config: Mapping[str, Any] | None = None) -> IGPS:
+        return cls._create(cls._gps_creators, name, config)
+
+    @classmethod
+    def create_radio(cls, name: str, config: Mapping[str, Any] | None = None) -> IRadio:
+        return cls._create(cls._radio_creators, name, config)
+
+    @classmethod
+    def create_sensor(cls, name: str, config: Mapping[str, Any] | None = None) -> ISensor:
+        return cls._create(cls._sensor_creators, name, config)
+
+    @classmethod
+    def create_module_port(cls, name: str, config: Mapping[str, Any] | None = None) -> IModulePort:
+        return cls._create(cls._module_port_creators, name, config)
+
+    @classmethod
+    def create_power(cls, name: str, config: Mapping[str, Any] | None = None) -> IPowerController:
+        return cls._create(cls._power_creators, name, config)
+
+    @staticmethod
+    def _create(
+        registry: Mapping[str, Creator[T]], name: str, config: Mapping[str, Any] | None
+    ) -> T:
+        if name not in registry:
+            msg = f"Unknown driver '{name}'"
+            raise KeyError(msg)
+        creator = registry[name]
+        return creator(config or {})

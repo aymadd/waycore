@@ -1,0 +1,5 @@
+mqtt_broker_url: "mqtt://mqtt:1883"
+port: 8000
+low_battery_threshold_percent: 15
+critical_battery_threshold_percent: 5
+publish_interval_seconds: 1.0

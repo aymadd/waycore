@@ -1,0 +1,11 @@
+mqtt_broker_url: "mqtt://mqtt:1883"
+port: 8003
+status_interval_seconds: 1.0
+radios_config:
+  radios:
+    - name: "lora1"
+      driver: "mock_lora"
+      config:
+        node_id: "!dev_node"
+tak:
+  enabled: false

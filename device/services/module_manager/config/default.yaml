@@ -1,0 +1,7 @@
+mqtt_broker_url: "mqtt://mqtt:1883"
+port: 8001
+publish_interval_seconds: 1.0
+driver_name: "mock"
+driver_config:
+  num_ports: 1
+  auto_connect_modules: true

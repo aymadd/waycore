@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: waycore-mqtt
+    ports:
+      - "1883:1883"
+    volumes:
+      - ../..:/workspace:ro
+      - ../mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 1883"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: "no"
+    networks:
+      - waycore-dev
+  core-daemon:
+    build:
+      context: ../..
+      dockerfile: device/services/core_daemon/Dockerfile
+    container_name: waycore-core-daemon
+    environment:
+      - CORE_DAEMON_CONFIG=/app/device/services/core_daemon/config/default.yaml
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mqtt
+    networks:
+      - waycore-dev
+  module-manager:
+    build:
+      context: ../..
+      dockerfile: device/services/module_manager/Dockerfile
+    container_name: waycore-module-manager
+    environment:
+      - MODULE_MANAGER_CONFIG=/app/device/services/module_manager/config/default.yaml
+    ports:
+      - "8001:8001"
+    depends_on:
+      - mqtt
+    networks:
+      - waycore-dev
+  comms-bridge:
+    build:
+      context: ../..
+      dockerfile: device/services/comms_bridge/Dockerfile
+    container_name: waycore-comms-bridge
+    environment:
+      - COMMS_BRIDGE_CONFIG=/app/device/services/comms_bridge/config/default.yaml
+    ports:
+      - "8003:8003"
+    depends_on:
+      - mqtt
+    networks:
+      - waycore-dev
+
+networks:
+  waycore-dev:
+    driver: bridge

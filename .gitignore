@@ -27,5 +27,14 @@ build/
 .env.*
 .cache/
 coverage/
+.coverage
+coverage.xml
+htmlcov/
+.pre-commit-cache/
 
+# Keep progress tracked (do not ignore progress/)
+# Ignore compiled caches inside progress if any
+progress/**/__pycache__/
+progress/**/.cache/
 
+/local_plan
