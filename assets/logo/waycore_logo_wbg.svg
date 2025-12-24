@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <style>
+      .ink { fill: #2B3D33; }
+      .stroke { fill: none; stroke: #2B3D33; stroke-width: 27; stroke-linecap: round; stroke-linejoin: round; }
+      .strokeThin { fill: none; stroke: #2B3D33; stroke-width: 22; stroke-linecap: round; stroke-linejoin: round; }
+      .word { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+              font-weight: 800; letter-spacing: 6px; }
+    </style>
+  </defs>
+
+  <!-- White background -->
+  <rect x="0" y="0" width="1024" height="1024" fill="#ffffff"/>
+
+  <!-- Rounded square frame -->
+  <rect x="92" y="92" width="840" height="840" rx="120" class="stroke"/>
+
+  <!-- Icon area boundary (invisible guide) -->
+  <!-- Icon sits above wordmark -->
+  <!-- Compass ring -->
+  <circle cx="512" cy="438" r="220" class="strokeThin"/>
+
+  <!-- East/West ticks (simple, bold) -->
+  <path d="M 252 438 L 332 438" class="strokeThin"/>
+  <path d="M 692 438 L 772 438" class="strokeThin"/>
+
+  <!-- North arrow (prominent) -->
+  <path class="ink" d="M512 170 L590 318 L512 292 L434 318 Z"/>
+
+  <!-- Inner chevron / secondary pointer -->
+  <path class="ink" d="M512 382 L560 462 L512 444 L464 462 Z"/>
+
+  <!-- Minimal mountain base -->
+  <path class="ink" d="M240 620 L400 470 L512 580 L624 470 L784 620 Z"/>
+
+  <!-- Cutout line under icon (adds structure) -->
+
+  <!-- Wordmark -->
+  <text x="512" y="860" text-anchor="middle" class="ink word" font-size="112">WAYCORE</text>
+</svg>

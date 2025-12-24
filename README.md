@@ -1,5 +1,7 @@
 # Waycore
 
+<img src="assets/logo/waycore_logo_wbg.svg" alt="Waycore logo" width="200">
+
 Modular, communications-first field computer designed for outdoors, EDC,
 survival, and trades/handyman use. The system separates a Linux SBC “main brain”
 (UI, AI, storage, networking) from a low-power ESP32-S3 sidecar (radios, GPS,
