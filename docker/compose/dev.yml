@@ -31,6 +31,8 @@ services:
       - mqtt
     networks:
       - waycore-dev
+    volumes:
+      - waycore-sockets:/tmp/waycore
   module-manager:
     build:
       context: ../..
@@ -44,6 +46,8 @@ services:
       - mqtt
     networks:
       - waycore-dev
+    volumes:
+      - waycore-sockets:/tmp/waycore
   comms-bridge:
     build:
       context: ../..
@@ -57,6 +61,8 @@ services:
       - mqtt
     networks:
       - waycore-dev
+    volumes:
+      - waycore-sockets:/tmp/waycore
   data-logger:
     build:
       context: ../..
@@ -72,6 +78,8 @@ services:
       - mqtt
     networks:
       - waycore-dev
+    volumes:
+      - waycore-sockets:/tmp/waycore
   ai-service:
     build:
       context: ../..
@@ -85,7 +93,11 @@ services:
       - mqtt
     networks:
       - waycore-dev
+    volumes:
+      - waycore-sockets:/tmp/waycore
 
 networks:
   waycore-dev:
     driver: bridge
+volumes:
+  waycore-sockets:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import signal
+from pathlib import Path
 from typing import Any
 
 import uvicorn
@@ -34,9 +35,18 @@ async def run() -> None:
     await service.start()
     app = create_app(service)
 
-    config = uvicorn.Config(
-        app=app, host="0.0.0.0", port=int(cfg.get("port", 8001)), log_level="info"
-    )
+    use_uds = os.getenv("USE_UNIX_SOCKET", "true").lower() == "true"
+    if use_uds:
+        socket_dir = Path("/tmp/waycore")
+        socket_dir.mkdir(parents=True, exist_ok=True)
+        uds_path = socket_dir / "module-manager.sock"
+        if uds_path.exists():
+            uds_path.unlink()
+        config = uvicorn.Config(app=app, uds=str(uds_path), log_level="info")
+    else:
+        config = uvicorn.Config(
+            app=app, host="0.0.0.0", port=int(cfg.get("port", 8001)), log_level="info"
+        )
     server = uvicorn.Server(config)
 
     loop = asyncio.get_running_loop()

@@ -143,6 +143,24 @@ curl http://localhost:8010/health          # ai-service
 curl http://localhost:8002/health          # data-logger
 ```
 
+## IPC (Local)
+
+- APIs over Unix domain sockets when `USE_UNIX_SOCKET=true` (default):
+  - Sockets in `/tmp/waycore/*.sock`
+  - Examples:
+    - `curl --unix-socket /tmp/waycore/core-daemon.sock http://localhost/health`
+    - `curl --unix-socket /tmp/waycore/ai-service.sock http://localhost/health`
+- Docker Compose mounts a shared volume `waycore-sockets` to `/tmp/waycore` for
+  services.
+- Fallback TCP ports when `USE_UNIX_SOCKET=false` for legacy/debug.
+
+Production policy:
+
+- Prefer UDS exclusively in production:
+  - Set `USE_UNIX_SOCKET=true` for all services
+  - Remove/avoid exposing TCP ports in compose/systemd units
+  - Keep HTTP/TCP only for quick debugging during development
+
 ## Service APIs (Dev)
 
 - **Core Daemon (8000)**:

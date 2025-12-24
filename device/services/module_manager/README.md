@@ -33,7 +33,7 @@ Run locally (Poetry)
 --------------------
 ```bash
 poetry install
-poetry run python -m device.services.module_manager.main
+USE_UNIX_SOCKET=true poetry run python -m device.services.module_manager.main
 ```
 
 Run with Docker
@@ -53,3 +53,11 @@ Notes
 -----
 - Keep protocol logic self-contained in `protocol.py`; publish only typed events to the bus.
 - Discovery should be idempotent and resilient to transient link errors.
+
+IPC
+---
+- API over Unix domain socket when `USE_UNIX_SOCKET=true` (default):
+  - Socket: `/tmp/waycore/module-manager.sock`
+  - Example: `curl --unix-socket /tmp/waycore/module-manager.sock http://localhost/health`
+- Fallback TCP port when `USE_UNIX_SOCKET=false`:
+  - Port from config (default 8001)

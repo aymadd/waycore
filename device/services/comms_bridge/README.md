@@ -34,7 +34,7 @@ typed messages with the outside world.
 
 ```bash
 poetry install
-poetry run python -m device.services.comms_bridge.main
+USE_UNIX_SOCKET=true poetry run python -m device.services.comms_bridge.main
 ```
 
 ## Run with Docker
@@ -56,3 +56,11 @@ poetry run pytest device/services/comms_bridge/tests -q
   formats into core logic.
 - Ensure backpressure and rate-limiting to protect the internal bus and radio
   links.
+
+## IPC
+
+- API over Unix domain socket when `USE_UNIX_SOCKET=true` (default):
+  - Socket: `/tmp/waycore/comms-bridge.sock`
+  - Example: `curl --unix-socket /tmp/waycore/comms-bridge.sock http://localhost/health`
+- Fallback TCP port when `USE_UNIX_SOCKET=false`:
+  - Port from config (default 8003)

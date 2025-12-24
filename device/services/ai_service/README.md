@@ -37,7 +37,7 @@ publishes typed outputs back onto the message bus.
 
 ```bash
 poetry install
-poetry run python -m device.services.ai_service.main
+USE_UNIX_SOCKET=true poetry run python -m device.services.ai_service.main
 ```
 
 ## Testing
@@ -53,3 +53,11 @@ poetry run pytest device/services/ai_service/tests -q
   allow swapping backends.
 - All bus I/O must use the shared schema types to ensure interop with other
   services.
+
+## IPC
+
+- API over Unix domain socket when `USE_UNIX_SOCKET=true` (default):
+  - Socket: `/tmp/waycore/ai-service.sock`
+  - Example: `curl --unix-socket /tmp/waycore/ai-service.sock http://localhost/health`
+- Fallback TCP port when `USE_UNIX_SOCKET=false`:
+  - Port from config (default 8010)

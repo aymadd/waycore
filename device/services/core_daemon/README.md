@@ -33,7 +33,7 @@ Run locally (Poetry)
 --------------------
 ```bash
 poetry install
-poetry run python -m device.services.core_daemon.main
+USE_UNIX_SOCKET=true poetry run python -m device.services.core_daemon.main
 ```
 
 Run with Docker
@@ -53,3 +53,11 @@ Notes
 -----
 - Keep transition logic pure and testable; avoid side-effects inside state evaluation where possible.
 - Power policy must be conservative by default and opt-in for higher draw operations.
+
+IPC
+---
+- API over Unix domain socket when `USE_UNIX_SOCKET=true` (default):
+  - Socket: `/tmp/waycore/core-daemon.sock`
+  - Example: `curl --unix-socket /tmp/waycore/core-daemon.sock http://localhost/health`
+- Fallback TCP port when `USE_UNIX_SOCKET=false`:
+  - Port from config (default 8000)

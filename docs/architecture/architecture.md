@@ -13,8 +13,8 @@ guidelines, standards, and extension points.
 
 ## High‑level architecture
 
-- UI app (Qt/QML) runs on the Linux SBC and interacts with services via HTTP and
-  the internal message bus.
+- UI app (Qt/QML) runs on the Linux SBC and interacts with services via Unix
+  domain sockets (HTTP/JSON over UDS) and the internal message bus.
 - Core services run as separate processes/containers and communicate over an
   internal MQTT bus:
   - core_daemon: system state machine, power policy, orchestration
@@ -41,10 +41,10 @@ graph LR
   RAD[[Radios: LoRa/WiFi/LTE/BLE]]:::ext
   TAK[[TAK Gateway]]:::ext
 
-  UI -- HTTP/JSON --> CD
-  UI -- HTTP/JSON --> MM
-  UI -- HTTP/JSON --> CB
-  UI -- optional HTTP/JSON --> AI
+  UI -- UDS (HTTP/JSON) --> CD
+  UI -- UDS (HTTP/JSON) --> MM
+  UI -- UDS (HTTP/JSON) --> CB
+  UI -- optional UDS (HTTP/JSON) --> AI
 
   CD -- MQTT/JSON --> MB
   MM -- MQTT/JSON --> MB
@@ -127,7 +127,7 @@ Notes:
 - Services must validate inputs against the shared Pydantic types before
   publish/consume.
 
-## Service APIs (HTTP)
+## Service APIs (HTTP over UDS)
 
 - Framework: FastAPI + Uvicorn
 - Content type: JSON; typed request/response models where applicable
@@ -135,10 +135,19 @@ Notes:
   - `GET /health` returns service health/uptime
   - Minimal operational APIs exposed for local tools (e.g., `/api/send`,
     `/api/status`)
-- Development ports:
+- Development ports (for debug only; UDS preferred in production):
   - core_daemon: 8000
   - module_manager: 8001
   - comms_bridge: 8003
+
+### IPC modes and production policy
+
+- Default (preferred): Unix domain sockets for request/response APIs.
+- MQTT remains the pub/sub event backbone between services.
+- Production guidance:
+  - Bind services to `/tmp/waycore/*.sock` (set `USE_UNIX_SOCKET=true`)
+  - Do not expose TCP ports externally in compose/systemd
+  - Keep TCP/localhost ports only for ad‑hoc debugging in development
 
 ## Data storage
 

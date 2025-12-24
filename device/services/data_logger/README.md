@@ -28,7 +28,7 @@ Run locally (Poetry)
 --------------------
 ```bash
 poetry install
-# Entrypoint to be added when implementation lands
+USE_UNIX_SOCKET=true poetry run python -m device.services.data_logger.main
 ```
 
 Testing
@@ -37,3 +37,11 @@ Testing
 poetry run pytest device/services/data_logger/tests -q
 ```
 Note: test suite will be introduced with the implementation.
+
+IPC
+---
+- API over Unix domain socket when `USE_UNIX_SOCKET=true` (default):
+  - Socket: `/tmp/waycore/data-logger.sock`
+  - Example: `curl --unix-socket /tmp/waycore/data-logger.sock http://localhost/health`
+- Fallback TCP port when `USE_UNIX_SOCKET=false`:
+  - Port from config (default 8002)
