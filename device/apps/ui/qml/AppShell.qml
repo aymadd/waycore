@@ -37,6 +37,16 @@ Item {
 			id: compassComponent
 			App.Compass {}
 		}
+
+		Component {
+			id: notesListComponent
+			App.NotesList {}
+		}
+
+		Component {
+			id: noteEditorComponent
+			App.NoteEditor {}
+		}
 	}
 
 	function navigateTo(appName) {
@@ -48,9 +58,17 @@ Item {
 			case "Compass":
 				router.push(compassComponent)
 				break
+			case "Notes":
+				router.push(notesListComponent)
+				break
 			default:
 				console.log("App not yet implemented:", appName)
 		}
+	}
+
+	function openNoteEditor(noteId) {
+		var editor = noteEditorComponent.createObject(null, {noteId: noteId})
+		router.push(editor)
 	}
 
 	function navigateToSettings() {

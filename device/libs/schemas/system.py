@@ -58,6 +58,12 @@ class CompassResponse(BaseModel):
     accuracy_degrees: float | None = Field(None, description="Accuracy in degrees")
     declination: float = Field(0.0, description="Magnetic declination")
     timestamp: datetime = Field(..., description="Reading timestamp")
+    # GPS data (optional - may not have fix)
+    latitude: float | None = Field(None, description="Latitude in degrees")
+    longitude: float | None = Field(None, description="Longitude in degrees")
+    gps_accuracy_m: float | None = Field(None, description="GPS accuracy in meters")
+    # Elevation data (optional)
+    elevation_m: float | None = Field(None, description="Elevation in meters")
 
 
 class SystemMode(str, Enum):

@@ -76,6 +76,14 @@ class AsyncSQLite:
                 value TEXT NOT NULL,
                 updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
             );
+
+            CREATE TABLE IF NOT EXISTS notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL DEFAULT '',
+                content TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            );
             """
         )
         await self._conn.commit()
@@ -149,9 +157,9 @@ class AsyncSQLite:
 
     # Default preference values
     DEFAULT_PREFERENCES: dict[str, str] = {
-        "units.temperature": "C",  # "C" or "F"
-        "units.distance": "km",  # "km" or "mi"
-        "units.weight": "kg",  # "kg" or "lb"
+        "units.temperature": "F",  # "C" or "F" - default Fahrenheit
+        "units.distance": "mi",  # "km" or "mi" - default miles
+        "units.weight": "lb",  # "kg" or "lb" - default pounds
     }
 
     # Valid values for each preference key
@@ -223,3 +231,86 @@ class AsyncSQLite:
         assert self._conn is not None
         await self._conn.execute("DELETE FROM user_preferences")
         await self._initialize_default_preferences()
+
+    # --- Notes ---
+
+    async def create_note(self, title: str = "", content: str = "") -> int:
+        """Create a new note. Returns the note ID."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            INSERT INTO notes (title, content) VALUES (?, ?)
+            """,
+            (title, content),
+        )
+        await self._conn.commit()
+        return cursor.lastrowid or 0
+
+    async def get_note(self, note_id: int) -> dict[str, Any] | None:
+        """Get a single note by ID."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            "SELECT id, title, content, created_at, updated_at FROM notes WHERE id = ?",
+            (note_id,),
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row:
+            return {
+                "id": row[0],
+                "title": row[1],
+                "content": row[2],
+                "created_at": row[3],
+                "updated_at": row[4],
+            }
+        return None
+
+    async def get_all_notes(self) -> list[dict[str, Any]]:
+        """Get all notes, ordered by most recently updated."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            SELECT id, title, content, created_at, updated_at
+            FROM notes ORDER BY updated_at DESC
+            """
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return [
+            {
+                "id": row[0],
+                "title": row[1],
+                "content": row[2],
+                "created_at": row[3],
+                "updated_at": row[4],
+            }
+            for row in rows
+        ]
+
+    async def update_note(self, note_id: int, title: str, content: str) -> bool:
+        """Update a note. Returns True if the note existed."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            UPDATE notes SET title = ?, content = ?,
+                updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            WHERE id = ?
+            """,
+            (title, content, note_id),
+        )
+        await self._conn.commit()
+        return bool(cursor.rowcount > 0)
+
+    async def delete_note(self, note_id: int) -> bool:
+        """Delete a note. Returns True if the note existed."""
+        assert self._conn is not None
+        cursor = await self._conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+        await self._conn.commit()
+        return bool(cursor.rowcount > 0)
+
+    async def delete_all_notes(self) -> int:
+        """Delete all notes. Returns number of deleted notes."""
+        assert self._conn is not None
+        cursor = await self._conn.execute("DELETE FROM notes")
+        await self._conn.commit()
+        return int(cursor.rowcount)

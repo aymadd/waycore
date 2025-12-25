@@ -14,6 +14,16 @@ Rectangle {
     property bool calibrated: SensorBridge ? SensorBridge.compassCalibrated : false
     property bool connected: SensorBridge ? SensorBridge.connected : false
 
+    // GPS data (optional)
+    property bool hasGps: SensorBridge ? SensorBridge.hasGpsFix : false
+    property real latitude: SensorBridge ? SensorBridge.gpsLatitude : 0
+    property real longitude: SensorBridge ? SensorBridge.gpsLongitude : 0
+    property real gpsAccuracy: SensorBridge ? SensorBridge.gpsAccuracy : 0
+
+    // Elevation data (optional)
+    property bool hasElevation: SensorBridge ? SensorBridge.hasElevation : false
+    property real elevation: SensorBridge ? SensorBridge.elevationMeters : 0
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: App.Theme.spacingMedium
@@ -190,10 +200,64 @@ Rectangle {
             }
         }
 
+        // GPS & Elevation info bar
+        Rectangle {
+            Layout.fillWidth: true
+            height: hasGps || hasElevation ? 60 : 0
+            visible: hasGps || hasElevation
+            color: App.Theme.surface
+            radius: 8
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: App.Theme.spacingSmall
+                spacing: App.Theme.spacingLarge
+
+                // GPS coordinates
+                Column {
+                    visible: hasGps
+                    spacing: 2
+
+                    Text {
+                        text: "📍 " + latitude.toFixed(4) + "°, " + longitude.toFixed(4) + "°"
+                        color: App.Theme.textPrimary
+                        font.pixelSize: App.Theme.bodySize
+                    }
+                    Text {
+                        text: "Accuracy: ±" + gpsAccuracy.toFixed(0) + "m"
+                        color: App.Theme.textSecondary
+                        font.pixelSize: 11
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+
+                // Elevation
+                Column {
+                    visible: hasElevation
+                    spacing: 2
+                    Layout.alignment: Qt.AlignRight
+
+                    Text {
+                        text: "⛰️ " + elevation.toFixed(0) + " m"
+                        color: App.Theme.textPrimary
+                        font.pixelSize: App.Theme.bodySize
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    Text {
+                        text: "Elevation"
+                        color: App.Theme.textSecondary
+                        font.pixelSize: 11
+                        horizontalAlignment: Text.AlignRight
+                    }
+                }
+            }
+        }
+
         // Bottom status bar
         Rectangle {
             Layout.fillWidth: true
-            height: 40
+            height: 36
             color: App.Theme.surface
             radius: 8
 
@@ -204,7 +268,7 @@ Rectangle {
                 Text {
                     text: "Calibration: " + (calibrated ? "✓ OK" : "⚠ Needed")
                     color: calibrated ? App.Theme.success : App.Theme.warning
-                    font.pixelSize: App.Theme.bodySize
+                    font.pixelSize: 12
                 }
 
                 Item { Layout.fillWidth: true }

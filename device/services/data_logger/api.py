@@ -14,6 +14,20 @@ class PreferenceUpdate(BaseModel):
     value: str
 
 
+class NoteCreate(BaseModel):
+    """Request body for creating a note."""
+
+    title: str = ""
+    content: str = ""
+
+
+class NoteUpdate(BaseModel):
+    """Request body for updating a note."""
+
+    title: str
+    content: str
+
+
 def create_app(service: DataLoggerService) -> FastAPI:
     app = FastAPI(title="Data Logger API")
 
@@ -67,5 +81,61 @@ def create_app(service: DataLoggerService) -> FastAPI:
         await service.reset_preferences()
         prefs = await service.get_all_preferences()
         return {"success": True, "preferences": prefs}
+
+    # --- Notes Endpoints ---
+
+    @app.get("/api/notes")  # type: ignore[misc]
+    async def get_all_notes() -> list[dict[str, Any]]:
+        """Get all notes, ordered by most recently updated."""
+        return await service.get_all_notes()
+
+    @app.post("/api/notes")  # type: ignore[misc]
+    async def create_note(body: NoteCreate) -> dict[str, Any]:
+        """Create a new note."""
+        note_id = await service.create_note(body.title, body.content)
+        note = await service.get_note(note_id)
+        return {"success": True, "note": note}
+
+    @app.get("/api/notes/{note_id}")  # type: ignore[misc]
+    async def get_note(note_id: int) -> dict[str, Any]:
+        """Get a single note by ID."""
+        note = await service.get_note(note_id)
+        if note is None:
+            raise HTTPException(status_code=404, detail="Note not found")
+        return note
+
+    @app.put("/api/notes/{note_id}")  # type: ignore[misc]
+    async def update_note(note_id: int, body: NoteUpdate) -> dict[str, Any]:
+        """Update a note."""
+        success = await service.update_note(note_id, body.title, body.content)
+        if not success:
+            raise HTTPException(status_code=404, detail="Note not found")
+        note = await service.get_note(note_id)
+        return {"success": True, "note": note}
+
+    @app.delete("/api/notes/{note_id}")  # type: ignore[misc]
+    async def delete_note(note_id: int) -> dict[str, Any]:
+        """Delete a note."""
+        success = await service.delete_note(note_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Note not found")
+        return {"success": True, "id": note_id}
+
+    # --- Factory Reset ---
+
+    @app.post("/api/factory-reset")  # type: ignore[misc]
+    async def factory_reset() -> dict[str, Any]:
+        """
+        Clear all user data: notes, preferences, logs.
+        """
+        notes_deleted = await service.delete_all_notes()
+        await service.reset_preferences()
+        # Could also clear events, comms_messages, ai_inferences if needed
+
+        return {
+            "success": True,
+            "notes_deleted": notes_deleted,
+            "message": "All user data cleared.",
+        }
 
     return app

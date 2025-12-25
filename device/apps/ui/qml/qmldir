@@ -6,3 +6,5 @@ StatusBar 1.0 StatusBar.qml
 Home 1.0 Home.qml
 Settings 1.0 Settings.qml
 Compass 1.0 Compass.qml
+NotesList 1.0 NotesList.qml
+NoteEditor 1.0 NoteEditor.qml

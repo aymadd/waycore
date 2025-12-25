@@ -53,6 +53,22 @@ _compass_state = {
     "last_update": time.monotonic(),
 }
 
+# Mock GPS state (San Francisco coordinates)
+_gps_state: dict[str, Any] = {
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "accuracy_m": 5.0,
+    "has_fix": True,
+    "drift_speed": 0.00001,  # Small position drift
+    "last_update": time.monotonic(),
+}
+
+# Mock elevation state
+_elevation_state = {
+    "meters": 52.0,  # Meters above sea level
+    "available": True,
+}
+
 
 def _update_mock_battery() -> None:
     """Simulate battery drain/charge over time."""
@@ -95,6 +111,25 @@ def _heading_to_cardinal(heading: float) -> str:
     # Each direction covers 45 degrees, offset by 22.5 to center
     index = int((heading + 22.5) / 45) % 8
     return directions[index]
+
+
+def _update_mock_gps() -> None:
+    """Simulate GPS position drift."""
+    if not _gps_state["has_fix"]:
+        return
+
+    # Small random drift in position
+    drift = _gps_state["drift_speed"]
+    _gps_state["latitude"] += random.uniform(-drift, drift)
+    _gps_state["longitude"] += random.uniform(-drift, drift)
+    _gps_state["accuracy_m"] = round(random.uniform(3, 15), 1)
+
+
+def _update_mock_elevation() -> None:
+    """Simulate small elevation variations."""
+    if _elevation_state["available"]:
+        # Small random variation
+        _elevation_state["meters"] = 52.0 + random.uniform(-2, 2)
 
 
 def create_app(service: CoreDaemonService) -> FastAPI:
@@ -191,16 +226,32 @@ def create_app(service: CoreDaemonService) -> FastAPI:
 
     @app.get("/api/sensors/compass")  # type: ignore[misc]
     async def get_compass() -> CompassResponse:
-        """Get compass/magnetometer reading."""
+        """Get compass/magnetometer reading with GPS and elevation."""
         _update_mock_compass()
+        _update_mock_gps()
+        _update_mock_elevation()
+
         heading = round(_compass_state["heading"], 1)
+
+        # GPS data (None if no fix)
+        latitude = round(_gps_state["latitude"], 6) if _gps_state["has_fix"] else None
+        longitude = round(_gps_state["longitude"], 6) if _gps_state["has_fix"] else None
+        gps_accuracy = _gps_state["accuracy_m"] if _gps_state["has_fix"] else None
+
+        # Elevation data (None if unavailable)
+        elevation = round(_elevation_state["meters"], 1) if _elevation_state["available"] else None
+
         return CompassResponse(
             heading_degrees=heading,
             heading_cardinal=_heading_to_cardinal(heading),
             calibrated=_compass_state["calibrated"],
             accuracy_degrees=2.0 if _compass_state["calibrated"] else 10.0,
-            declination=0.0,  # Could be configurable per location
+            declination=0.0,
             timestamp=datetime.now(timezone.utc),
+            latitude=latitude,
+            longitude=longitude,
+            gps_accuracy_m=gps_accuracy,
+            elevation_m=elevation,
         )
 
     @app.post("/api/sensors/compass/calibrate")  # type: ignore[misc]
@@ -214,5 +265,46 @@ def create_app(service: CoreDaemonService) -> FastAPI:
         """Set compass heading (for testing)."""
         _compass_state["heading"] = heading % 360
         return {"heading": _compass_state["heading"]}
+
+    # --- System Management ---
+
+    @app.post("/api/system/factory-reset")  # type: ignore[misc]
+    async def factory_reset() -> dict[str, Any]:
+        """
+        Factory reset: clears all user data and resets to defaults.
+
+        This endpoint resets:
+        - All mock sensor states to defaults
+        - User preferences (via data-logger)
+        - Notes (via data-logger)
+        - Event logs (via data-logger)
+        """
+        # Reset mock states to defaults
+        _battery_state["level"] = 85
+        _battery_state["is_charging"] = False
+        _battery_state["voltage"] = 3.85
+        _battery_state["last_update"] = time.monotonic()
+
+        _temperature_state["celsius"] = 22.5
+        _temperature_state["last_update"] = time.monotonic()
+
+        _compass_state["heading"] = 45.0
+        _compass_state["calibrated"] = True
+        _compass_state["drift_rate"] = 0.5
+        _compass_state["last_update"] = time.monotonic()
+
+        _gps_state["latitude"] = 37.7749
+        _gps_state["longitude"] = -122.4194
+        _gps_state["accuracy_m"] = 5.0
+        _gps_state["has_fix"] = True
+        _gps_state["last_update"] = time.monotonic()
+
+        _elevation_state["meters"] = 52.0
+        _elevation_state["available"] = True
+
+        return {
+            "success": True,
+            "message": "Factory reset complete. All data cleared.",
+        }
 
     return app

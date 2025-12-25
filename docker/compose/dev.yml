@@ -23,6 +23,7 @@ services:
     container_name: waycore-core-daemon
     environment:
       - CORE_DAEMON_CONFIG=/app/device/services/core_daemon/config/default.yaml
+      - USE_UNIX_SOCKET=false  # Use HTTP for local dev (UI runs outside Docker)
     ports:
       - "8000:8000"
     depends_on:
@@ -68,6 +69,7 @@ services:
     container_name: waycore-data-logger
     environment:
       - DATA_LOGGER_CONFIG=/app/device/services/data_logger/config/default.yaml
+      - USE_UNIX_SOCKET=false  # Use HTTP for local dev (UI runs outside Docker)
     volumes:
       - ../..:/workspace:ro
       - waycore-sockets:/tmp/waycore

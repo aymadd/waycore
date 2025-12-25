@@ -154,12 +154,29 @@ print(f'Main.qml exists: {(qml_dir / \"Main.qml\").exists()}')
 
 ## Step 4: Development Workflow
 
-### Running with Auto-Reload (Recommended for Development)
+### QML Hot Reload (Recommended for Development)
 
-For faster development iteration, you can use a file watcher. However, Qt/QML doesn't have built-in hot-reload. You'll need to:
+The UI includes built-in QML hot reload! When you save a `.qml` file, the UI automatically reloads:
 
-1. **Make changes to QML files**
-2. **Restart the application** to see changes
+```bash
+# Hot reload is enabled by default
+poetry run waycore-ui
+```
+
+You'll see in the console:
+```
+🔥 QML Hot Reload enabled - watching /path/to/qml
+📝 File changed: Home.qml
+🔄 Reloading QML...
+✅ QML reloaded!
+```
+
+**To disable hot reload** (for production-like testing):
+```bash
+WAYCORE_DEV=0 poetry run waycore-ui
+```
+
+**Note:** Only QML file changes are hot-reloaded. Python changes (bridges, etc.) require a restart.
 
 ### Testing Different Screen Sizes
 

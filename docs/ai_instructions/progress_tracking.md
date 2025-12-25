@@ -11,13 +11,22 @@ This document defines how Cursor AI should track and manage implementation progr
 ```
 progress/
 ├── TODO/                    # Tasks not yet started
-│   ├── phase-00/
+│   ├── phase-00/            # Sequential feature phases
 │   │   ├── 0.1-repository-structure.md
 │   │   ├── 0.2-poetry-setup.md
 │   │   └── ...
 │   ├── phase-01/
 │   ├── phase-02/
-│   └── ...
+│   ├── ...
+│   ├── prod-phase-00/       # Production deployment phases
+│   │   ├── P-0.1-production-compose.md
+│   │   └── ...
+│   ├── improvements/        # Enhancements to existing features
+│   │   ├── imp-1-notes-rich-text.md
+│   │   └── ...
+│   └── ideas/               # Future feature concepts
+│       ├── idea-1-save-coordinates.md
+│       └── ...
 ├── IN_PROGRESS/            # Tasks currently being worked on
 │   ├── current-task.md
 │   └── ...
@@ -34,18 +43,27 @@ progress/
 
 ---
 
+## Task Categories
+
+| Category | Directory | Purpose | Priority |
+|----------|-----------|---------|----------|
+| Phase | `phase-XX/` | Sequential feature implementation | High - core roadmap |
+| Prod-Phase | `prod-phase-XX/` | Production deployment tasks | High - release blockers |
+| Improvements | `improvements/` | Enhancements to existing features | Medium - polish |
+| Ideas | `ideas/` | Future concepts and proposals | Low - backlog |
+
+---
+
 ## Task File Format
 
 ### File Naming Convention
 
-```
-{phase}-{task-number}-{short-description}.md
-```
-
-Examples:
-- `0.1-repository-structure.md`
-- `1.2-system-schemas.md`
-- `9.3-settings-screen.md`
+| Category | Format | Examples |
+|----------|--------|----------|
+| Phase | `{phase}.{task}-{description}.md` | `0.1-repository-structure.md`, `12.8-settings-submenu.md` |
+| Prod-Phase | `P-{phase}.{task}-{description}.md` | `P-0.1-production-compose.md` |
+| Improvement | `imp-{n}-{description}.md` | `imp-1-notes-rich-text.md` |
+| Idea | `idea-{n}-{description}.md` | `idea-1-save-coordinates.md` |
 
 ### Task File Template
 

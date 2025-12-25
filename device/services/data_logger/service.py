@@ -75,6 +75,32 @@ class DataLoggerService(BaseService):
         """Reset all preferences to defaults."""
         await self._db.reset_preferences()
 
+    # --- Notes ---
+
+    async def get_all_notes(self) -> list[dict[str, Any]]:
+        """Get all notes, ordered by most recently updated."""
+        return await self._db.get_all_notes()
+
+    async def get_note(self, note_id: int) -> dict[str, Any] | None:
+        """Get a single note by ID."""
+        return await self._db.get_note(note_id)
+
+    async def create_note(self, title: str = "", content: str = "") -> int:
+        """Create a new note. Returns the note ID."""
+        return await self._db.create_note(title, content)
+
+    async def update_note(self, note_id: int, title: str, content: str) -> bool:
+        """Update a note. Returns True if found and updated."""
+        return await self._db.update_note(note_id, title, content)
+
+    async def delete_note(self, note_id: int) -> bool:
+        """Delete a note. Returns True if found and deleted."""
+        return await self._db.delete_note(note_id)
+
+    async def delete_all_notes(self) -> int:
+        """Delete all notes (for factory reset). Returns count."""
+        return await self._db.delete_all_notes()
+
     # Handlers
     def _on_comms(self, topic: str, payload: bytes) -> None:
         try:

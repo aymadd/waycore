@@ -9,6 +9,47 @@ Rectangle {
 	id: settings
 	color: App.Theme.background
 
+	// Factory reset function (at root scope so it's accessible from Button)
+	function performFactoryReset() {
+		console.log("Factory reset: calling backend...")
+
+		// Call backend factory reset via SensorBridge
+		var success = false
+		if (SensorBridge) {
+			success = SensorBridge.factoryReset()
+		}
+
+		if (success) {
+			resetStatusText.text = "✅ Factory reset complete"
+			resetStatusText.color = App.Theme.success
+			console.log("Factory reset successful")
+		} else {
+			resetStatusText.text = "⚠️ Reset completed (offline mode)"
+			resetStatusText.color = App.Theme.warning
+			console.log("Factory reset: backend not available, local settings reset")
+		}
+
+		resetButton.isResetting = false
+
+		// Navigate home after a delay
+		resetCompleteTimer.start()
+	}
+
+	// Timer at root scope for navigation after reset
+	Timer {
+		id: resetCompleteTimer
+		interval: 1500
+		onTriggered: {
+			var shell = settings.parent
+			while (shell && !shell.hasOwnProperty("navigateHome")) {
+				shell = shell.parent
+			}
+			if (shell && shell.navigateHome) {
+				shell.navigateHome()
+			}
+		}
+	}
+
 	Flickable {
 		anchors.fill: parent
 		anchors.margins: App.Theme.spacingLarge
@@ -47,16 +88,16 @@ Rectangle {
 				}
 			}
 
-			// Persistent app preferences
+			// Persistent app preferences (defaults match backend: F, mi, lb)
 			Settings {
 				id: appSettings
 				category: "waycore.ui"
 				property bool debug: false
 				property string theme: "dark"
 				property int brightness: 75
-				property string temperatureUnit: "C"
-				property string distanceUnit: "km"
-				property string weightUnit: "kg"
+				property string temperatureUnit: "F"
+				property string distanceUnit: "mi"
+				property string weightUnit: "lb"
 			}
 
 			Component.onCompleted: {
@@ -123,6 +164,7 @@ Rectangle {
 					spacing: App.Theme.spacingSmall
 					Text { text: "Temperature"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.bodySize; Layout.preferredWidth: 100 }
 					ComboBox {
+						id: temperatureCombo
 						model: ["Celsius (°C)", "Fahrenheit (°F)"]
 						currentIndex: appSettings.temperatureUnit === "C" ? 0 : 1
 						onActivated: {
@@ -138,6 +180,7 @@ Rectangle {
 					spacing: App.Theme.spacingSmall
 					Text { text: "Distance"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.bodySize; Layout.preferredWidth: 100 }
 					ComboBox {
+						id: distanceCombo
 						model: ["Kilometers (km)", "Miles (mi)"]
 						currentIndex: appSettings.distanceUnit === "km" ? 0 : 1
 						onActivated: appSettings.distanceUnit = currentIndex === 0 ? "km" : "mi"
@@ -150,6 +193,7 @@ Rectangle {
 					spacing: App.Theme.spacingSmall
 					Text { text: "Weight"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.bodySize; Layout.preferredWidth: 100 }
 					ComboBox {
+						id: weightCombo
 						model: ["Kilograms (kg)", "Pounds (lb)"]
 						currentIndex: appSettings.weightUnit === "kg" ? 0 : 1
 						onActivated: appSettings.weightUnit = currentIndex === 0 ? "kg" : "lb"
@@ -183,6 +227,77 @@ Rectangle {
 						currentIndex: appSettings.theme === "dark" ? 0 : 1
 						onActivated: appSettings.theme = currentText
 					}
+				}
+			}
+
+			// Factory Reset Card
+			UI.Card {
+				Layout.fillWidth: true
+
+				Text { text: "Reset"; color: App.Theme.textPrimary; font.pixelSize: App.Theme.h2Size }
+
+				Text {
+					text: "Factory reset will delete all notes, preferences, and restore default settings."
+					color: App.Theme.textSecondary
+					font.pixelSize: App.Theme.bodySize
+					wrapMode: Text.WordWrap
+					width: parent.width
+				}
+
+				Button {
+					id: resetButton
+					text: isResetting ? "Resetting..." : (confirmReset ? "Tap again to confirm" : "Factory Reset")
+					width: parent.width
+					enabled: !isResetting
+
+					property bool confirmReset: false
+					property bool isResetting: false
+
+					onClicked: {
+						if (isResetting) return
+
+						if (confirmReset) {
+							// Perform actual factory reset
+							isResetting = true
+							confirmReset = false
+							resetStatusText.text = "Resetting..."
+							resetStatusText.color = App.Theme.warning
+							resetStatusText.visible = true
+
+							// Reset local app settings to defaults
+							appSettings.temperatureUnit = "F"
+							appSettings.distanceUnit = "mi"
+							appSettings.weightUnit = "lb"
+							appSettings.brightness = 75
+							appSettings.debug = false
+							appSettings.theme = "dark"
+							App.SensorData.temperatureUnit = "F"
+
+							// Force ComboBox UI to update
+							temperatureCombo.currentIndex = 1  // Fahrenheit
+							distanceCombo.currentIndex = 1     // Miles
+							weightCombo.currentIndex = 1       // Pounds
+
+							// Call backend to reset data (function at root scope)
+							settings.performFactoryReset()
+						} else {
+							confirmReset = true
+							confirmTimer.start()
+						}
+					}
+
+					Timer {
+						id: confirmTimer
+						interval: 3000
+						onTriggered: resetButton.confirmReset = false
+					}
+				}
+
+				Text {
+					id: resetStatusText
+					visible: false
+					color: App.Theme.warning
+					font.pixelSize: App.Theme.bodySize
 				}
 			}
 

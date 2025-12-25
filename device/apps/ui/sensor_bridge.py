@@ -63,6 +63,14 @@ class SensorBridge(QObject):
         self._compass_cardinal = "N"
         self._compass_calibrated = True
 
+        # GPS (None means no fix/data)
+        self._gps_latitude: float | None = None
+        self._gps_longitude: float | None = None
+        self._gps_accuracy: float | None = None
+
+        # Elevation (None means unavailable)
+        self._elevation_m: float | None = None
+
         # Update timer
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update_all)
@@ -162,13 +170,19 @@ class SensorBridge(QObject):
                 pass  # Keep default values
 
     def _update_compass(self) -> None:
-        """Fetch compass data from backend."""
+        """Fetch compass data from backend (includes GPS/elevation)."""
         if self._client and self._connected:
             try:
                 data = self._client.get_compass()
                 self._compass_heading = data["heading_degrees"]
                 self._compass_cardinal = data["heading_cardinal"]
                 self._compass_calibrated = data["calibrated"]
+                # GPS data (may be None)
+                self._gps_latitude = data.get("latitude")
+                self._gps_longitude = data.get("longitude")
+                self._gps_accuracy = data.get("gps_accuracy_m")
+                # Elevation (may be None)
+                self._elevation_m = data.get("elevation_m")
                 self.compassChanged.emit()
                 return
             except Exception as e:
@@ -179,6 +193,12 @@ class SensorBridge(QObject):
 
         self._compass_heading = (time.time() * 5) % 360  # 5 degrees per second
         self._compass_cardinal = self._heading_to_cardinal(self._compass_heading)
+        # Mock GPS (San Francisco)
+        self._gps_latitude = 37.7749
+        self._gps_longitude = -122.4194
+        self._gps_accuracy = 5.0
+        # Mock elevation
+        self._elevation_m = 52.0
         self.compassChanged.emit()
 
     @staticmethod
@@ -254,6 +274,30 @@ class SensorBridge(QObject):
     def compassCalibrated(self) -> bool:
         return self._compass_calibrated
 
+    @Property(float, notify=compassChanged)  # type: ignore[arg-type]
+    def gpsLatitude(self) -> float:
+        return self._gps_latitude if self._gps_latitude is not None else 0.0
+
+    @Property(float, notify=compassChanged)  # type: ignore[arg-type]
+    def gpsLongitude(self) -> float:
+        return self._gps_longitude if self._gps_longitude is not None else 0.0
+
+    @Property(bool, notify=compassChanged)  # type: ignore[arg-type]
+    def hasGpsFix(self) -> bool:
+        return self._gps_latitude is not None and self._gps_longitude is not None
+
+    @Property(float, notify=compassChanged)  # type: ignore[arg-type]
+    def gpsAccuracy(self) -> float:
+        return self._gps_accuracy if self._gps_accuracy is not None else 0.0
+
+    @Property(float, notify=compassChanged)  # type: ignore[arg-type]
+    def elevationMeters(self) -> float:
+        return self._elevation_m if self._elevation_m is not None else 0.0
+
+    @Property(bool, notify=compassChanged)  # type: ignore[arg-type]
+    def hasElevation(self) -> bool:
+        return self._elevation_m is not None
+
     # --- Slots for QML to call ---
 
     @Slot()  # type: ignore[arg-type]
@@ -307,3 +351,34 @@ class SensorBridge(QObject):
             # Mock calibration
             self._compass_calibrated = True
             self.compassChanged.emit()
+
+    @Slot(result=bool)  # type: ignore[arg-type]
+    def factoryReset(self) -> bool:
+        """
+        Perform factory reset on backend services.
+        Clears all user data and resets settings to defaults.
+        Returns True if successful.
+        """
+        from .api_client import DataLoggerClient
+
+        success = True
+
+        # Reset core daemon (sensor states, etc.)
+        if self._client and self._connected:
+            try:
+                self._client.factory_reset()
+                logger.info("Core daemon factory reset complete")
+            except Exception as e:
+                logger.error(f"Core daemon factory reset failed: {e}")
+                success = False
+
+        # Reset data logger (notes, preferences, logs)
+        try:
+            data_client = DataLoggerClient()
+            data_client.factory_reset()
+            logger.info("Data logger factory reset complete")
+        except Exception as e:
+            logger.error(f"Data logger factory reset failed: {e}")
+            success = False
+
+        return success

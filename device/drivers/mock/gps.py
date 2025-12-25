@@ -1,104 +1,109 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import random
-from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
-from device.libs.hil.interfaces.gps import IGPS, GPSFix
+from device.libs.hil.interfaces.gps import IGPS, GPSFixType, GPSReading
 
 
 class MockGPS(IGPS):
-    def __init__(self, config: dict[str, Any]) -> None:
-        self._running = False
-        self._has_fix = False
-        self._callbacks: list[Callable[[GPSFix], None]] = []
-        self._task: asyncio.Task[None] | None = None
+    """
+    Mock GPS that simulates position data.
 
-        self._lat: float = float(config.get("start_lat", 30.2672))
-        self._lon: float = float(config.get("start_lon", -97.7431))
-        self._fix_time_seconds: int = int(config.get("fix_time_seconds", 4))
-        self._update_rate_hz: float = float(config.get("update_rate_hz", 1.0))
-        self._satellites: int = 0
-        random.seed(0)
+    Supports:
+    - Configurable base position
+    - Simulated movement (random walk)
+    - Variable fix quality
+    """
+
+    def __init__(self, config: dict[str, Any]) -> None:
+        # Base position (default: San Francisco)
+        self._latitude: float = float(config.get("latitude", 37.7749))
+        self._longitude: float = float(config.get("longitude", -122.4194))
+        self._altitude: float = float(config.get("altitude", 10.0))
+
+        # Movement simulation
+        self._drift_enabled: bool = bool(config.get("drift_enabled", True))
+        self._drift_speed: float = float(config.get("drift_speed", 0.0001))  # Degrees per update
+
+        # State
+        self._ready = False
+        self._has_fix = False
+        self._tracking = False
+        self._speed = 0.0
+        self._heading = 0.0
 
     @property
-    def is_running(self) -> bool:
-        return self._running
+    def is_ready(self) -> bool:
+        return self._ready
 
     @property
     def has_fix(self) -> bool:
         return self._has_fix
 
-    async def start(self) -> None:
-        if self._running:
-            return
-        self._running = True
-        self._task = asyncio.create_task(self._loop())
+    async def initialize(self) -> bool:
+        """Simulate GPS initialization and acquiring fix."""
+        await asyncio.sleep(0.1)  # Simulate startup
+        self._ready = True
+        self._has_fix = True  # Mock always has fix after init
+        return True
 
-    async def stop(self) -> None:
-        self._running = False
-        if self._task:
-            self._task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._task
-            self._task = None
-
-    async def get_position(self) -> GPSFix | None:
-        if not self._has_fix:
+    async def read(self) -> GPSReading | None:
+        """Read current GPS position."""
+        if not self._ready or not self._has_fix:
             return None
-        return self._make_fix()
 
-    def subscribe_position(self, callback: Callable[[GPSFix], None]) -> None:
-        self._callbacks.append(callback)
+        # Apply drift if enabled
+        if self._drift_enabled:
+            self._latitude += random.uniform(-self._drift_speed, self._drift_speed)
+            self._longitude += random.uniform(-self._drift_speed, self._drift_speed)
+            self._altitude += random.uniform(-0.5, 0.5)
 
-    async def wait_for_fix(self, timeout_seconds: float = 60.0) -> bool:
-        start = datetime.now(timezone.utc).timestamp()
-        while (
-            not self._has_fix and (datetime.now(timezone.utc).timestamp() - start) < timeout_seconds
-        ):
-            await asyncio.sleep(0.05)
-        return self._has_fix
+            # Keep within valid ranges
+            self._latitude = max(-90, min(90, self._latitude))
+            self._longitude = max(-180, min(180, self._longitude))
+            self._altitude = max(0, self._altitude)
 
-    async def _loop(self) -> None:
-        interval = 1.0 / max(self._update_rate_hz, 0.1)
-        elapsed = 0.0
-        while self._running:
-            await asyncio.sleep(interval)
-            elapsed += interval
-            # Satellites ramp up until fix
-            if not self._has_fix:
-                self._satellites = min(self._satellites + 1, 8)
-                if elapsed >= self._fix_time_seconds and self._satellites >= 4:
-                    self._has_fix = True
-            # Drift position slightly when fixed
-            if self._has_fix:
-                self._lat += random.uniform(-0.00005, 0.00005)
-                self._lon += random.uniform(-0.00005, 0.00005)
-                fix = self._make_fix()
-                for cb in list(self._callbacks):
-                    try:
-                        cb(fix)
-                    except Exception:
-                        pass
+        # Simulate speed and heading
+        self._speed = random.uniform(0, 2.0) if self._tracking else 0
+        self._heading = random.uniform(0, 360)
 
-    def _make_fix(self) -> GPSFix:
-        return GPSFix(
+        return GPSReading(
             timestamp=datetime.now(timezone.utc),
-            latitude=self._lat,
-            longitude=self._lon,
-            altitude_m=None,
-            speed_kmh=0.0,
-            heading_deg=0.0,
-            satellites=self._satellites,
-            hdop=0.8 if self._has_fix else None,
-            fix_quality="gps" if self._has_fix else "no_fix",
+            latitude=round(self._latitude, 6),
+            longitude=round(self._longitude, 6),
+            altitude_m=round(self._altitude, 1),
+            speed_mps=round(self._speed, 2),
+            heading=round(self._heading, 1),
+            accuracy_m=round(random.uniform(3, 15), 1),
+            fix_type=GPSFixType.fix_3d,
+            satellites=random.randint(6, 12),
         )
+
+    async def start_tracking(self) -> bool:
+        """Start continuous tracking."""
+        self._tracking = True
+        return True
+
+    async def stop_tracking(self) -> None:
+        """Stop continuous tracking."""
+        self._tracking = False
+
+    def set_position(self, lat: float, lon: float, alt: float | None = None) -> None:
+        """Set position externally (for testing)."""
+        self._latitude = lat
+        self._longitude = lon
+        if alt is not None:
+            self._altitude = alt
+
+    def set_fix(self, has_fix: bool) -> None:
+        """Set fix status (for testing)."""
+        self._has_fix = has_fix
 
 
 def register(_: object) -> None:
-    from device.libs.hil.factory import DriverFactory
-
-    DriverFactory.register_gps("mock", lambda cfg: MockGPS(dict(cfg)))
+    """Register the mock GPS driver with the factory."""
+    # GPS is currently used directly, not via factory
+    pass
