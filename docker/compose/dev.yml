@@ -72,14 +72,13 @@ services:
       - DATA_LOGGER_CONFIG=/app/device/services/data_logger/config/default.yaml
     volumes:
       - ../..:/workspace:ro
+      - waycore-sockets:/tmp/waycore
     ports:
       - "8002:8002"
     depends_on:
       - mqtt
     networks:
       - waycore-dev
-    volumes:
-      - waycore-sockets:/tmp/waycore
   ai-service:
     build:
       context: ../..

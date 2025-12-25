@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir poetry==2.2.1
 COPY pyproject.toml /app/
-RUN poetry config virtualenvs.create false && poetry install --only main --no-interaction --no-ansi
+RUN poetry config virtualenvs.create false && poetry install --only main --no-interaction --no-ansi --no-root
 
 COPY device /app/device
 

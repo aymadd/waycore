@@ -1,4 +1,4 @@
-mqtt_broker_url: "mqtt://localhost:1883"
+mqtt_broker_url: "mqtt://mqtt:1883"
 port: 8010
 response_source: "ai-service"
 idle_sleep_seconds: 0.1

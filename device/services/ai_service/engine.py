@@ -3,12 +3,13 @@ from __future__ import annotations
 import time
 from typing import cast
 
-from ...libs.schemas.ai import (
+from device.libs.schemas.ai import (
     AIInferenceRequest,
     AIInferenceResponse,
     InferenceResult,
     InferenceType,
 )
+
 from .models.runtime import ModelRunner
 from .models.runtime import registry as model_registry
 from .preprocessing import ImagePreprocessed, PreprocessedInput, QAPreprocessed

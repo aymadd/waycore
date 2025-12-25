@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, TypedDict, Union
 
-from ...libs.schemas.ai import AIInferenceRequest, InferenceType
+from device.libs.schemas.ai import AIInferenceRequest, InferenceType
 
 
 class PreprocessingError(ValueError):
