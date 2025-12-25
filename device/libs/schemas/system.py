@@ -49,6 +49,17 @@ class SystemInfoResponse(BaseModel):
     hostname: str = Field(..., description="Device hostname")
 
 
+class CompassResponse(BaseModel):
+    """Response for /api/sensors/compass endpoint."""
+
+    heading_degrees: float = Field(..., ge=0, lt=360, description="Heading in degrees (0=N)")
+    heading_cardinal: str = Field(..., description="Cardinal direction (N, NE, E, etc.)")
+    calibrated: bool = Field(..., description="Whether compass is calibrated")
+    accuracy_degrees: float | None = Field(None, description="Accuracy in degrees")
+    declination: float = Field(0.0, description="Magnetic declination")
+    timestamp: datetime = Field(..., description="Reading timestamp")
+
+
 class SystemMode(str, Enum):
     idle = "idle"
     active = "active"

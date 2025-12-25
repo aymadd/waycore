@@ -10,6 +10,7 @@ from typing import Any
 
 from device.libs.schemas.system import (
     BatteryResponse,
+    CompassResponse,
     SystemCommand,
     SystemInfoResponse,
     SystemTimeResponse,
@@ -44,6 +45,14 @@ _temperature_state = {
     "last_update": time.monotonic(),
 }
 
+# Mock compass state
+_compass_state = {
+    "heading": 45.0,  # NE direction
+    "calibrated": True,
+    "drift_rate": 0.5,  # Degrees per second (slow drift for realism)
+    "last_update": time.monotonic(),
+}
+
 
 def _update_mock_battery() -> None:
     """Simulate battery drain/charge over time."""
@@ -66,6 +75,26 @@ def _update_mock_temperature() -> None:
     """Simulate temperature variation."""
     # Add small random variation around base temperature
     _temperature_state["celsius"] = 22.5 + random.uniform(-2, 2)
+
+
+def _update_mock_compass() -> None:
+    """Simulate compass heading with slow drift."""
+    now = time.monotonic()
+    elapsed = now - _compass_state["last_update"]
+    _compass_state["last_update"] = now
+
+    # Apply slow drift + random noise
+    drift = _compass_state["drift_rate"] * elapsed
+    noise = random.uniform(-1, 1)
+    _compass_state["heading"] = (_compass_state["heading"] + drift + noise) % 360
+
+
+def _heading_to_cardinal(heading: float) -> str:
+    """Convert heading degrees to cardinal direction."""
+    directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    # Each direction covers 45 degrees, offset by 22.5 to center
+    index = int((heading + 22.5) / 45) % 8
+    return directions[index]
 
 
 def create_app(service: CoreDaemonService) -> FastAPI:
@@ -157,5 +186,33 @@ def create_app(service: CoreDaemonService) -> FastAPI:
             python_version=sys.version.split()[0],
             hostname=socket.gethostname(),
         )
+
+    # --- Sensor Endpoints ---
+
+    @app.get("/api/sensors/compass")  # type: ignore[misc]
+    async def get_compass() -> CompassResponse:
+        """Get compass/magnetometer reading."""
+        _update_mock_compass()
+        heading = round(_compass_state["heading"], 1)
+        return CompassResponse(
+            heading_degrees=heading,
+            heading_cardinal=_heading_to_cardinal(heading),
+            calibrated=_compass_state["calibrated"],
+            accuracy_degrees=2.0 if _compass_state["calibrated"] else 10.0,
+            declination=0.0,  # Could be configurable per location
+            timestamp=datetime.now(timezone.utc),
+        )
+
+    @app.post("/api/sensors/compass/calibrate")  # type: ignore[misc]
+    async def calibrate_compass() -> dict[str, Any]:
+        """Start compass calibration (mock: instant success)."""
+        _compass_state["calibrated"] = True
+        return {"success": True, "message": "Calibration complete"}
+
+    @app.post("/api/sensors/compass/heading")  # type: ignore[misc]
+    async def set_compass_heading(heading: float) -> dict[str, Any]:
+        """Set compass heading (for testing)."""
+        _compass_state["heading"] = heading % 360
+        return {"heading": _compass_state["heading"]}
 
     return app

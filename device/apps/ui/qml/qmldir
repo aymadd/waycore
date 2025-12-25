@@ -5,3 +5,4 @@ AppShell 1.0 AppShell.qml
 StatusBar 1.0 StatusBar.qml
 Home 1.0 Home.qml
 Settings 1.0 Settings.qml
+Compass 1.0 Compass.qml

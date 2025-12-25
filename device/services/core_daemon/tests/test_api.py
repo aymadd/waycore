@@ -110,3 +110,22 @@ async def test_api_system_info() -> None:
         assert "python_version" in body
         assert "hostname" in body
     await svc.stop()
+
+
+@pytest.mark.asyncio
+async def test_api_compass() -> None:
+    """Test /api/sensors/compass endpoint."""
+    svc = CoreDaemonService(config={"publish_interval_seconds": 0.05}, bus=NoopBus())
+    await svc.start()
+    app = create_app(svc)
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        resp = await ac.get("/api/sensors/compass")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "heading_degrees" in body
+        assert "heading_cardinal" in body
+        assert "calibrated" in body
+        assert "timestamp" in body
+        assert 0 <= body["heading_degrees"] < 360
+        assert body["heading_cardinal"] in ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    await svc.stop()

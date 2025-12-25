@@ -32,11 +32,29 @@ Item {
 			id: settingsComponent
 			App.Settings {}
 		}
+
+		Component {
+			id: compassComponent
+			App.Compass {}
+		}
+	}
+
+	function navigateTo(appName) {
+		console.log("Navigate to:", appName)
+		switch (appName) {
+			case "Settings":
+				router.push(settingsComponent)
+				break
+			case "Compass":
+				router.push(compassComponent)
+				break
+			default:
+				console.log("App not yet implemented:", appName)
+		}
 	}
 
 	function navigateToSettings() {
-		console.log("Navigate to settings")
-		router.push(settingsComponent)
+		navigateTo("Settings")
 	}
 
 	function navigateBack() {

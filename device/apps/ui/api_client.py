@@ -63,6 +63,14 @@ class CoreDaemonClient(UnixSocketClient):
         """Get system information (version, etc.)."""
         return self.get("/api/system/info")
 
+    def get_compass(self) -> dict[str, Any]:
+        """Get compass/magnetometer reading."""
+        return self.get("/api/sensors/compass")
+
+    def calibrate_compass(self) -> dict[str, Any]:
+        """Start compass calibration."""
+        return self.post("/api/sensors/compass/calibrate", json={})
+
 
 class DataLoggerClient(UnixSocketClient):
     """Client for Data Logger service (preferences, history)."""

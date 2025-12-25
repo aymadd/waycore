@@ -73,21 +73,20 @@ Rectangle {
 						}
 					}
 
-					MouseArea {
-						anchors.fill: parent
-						onClicked: {
-					console.log("Open", model.name)
-					if (model.name === "Settings") {
-								var parentItem = home.parent
-								while (parentItem && !parentItem.hasOwnProperty("navigateToSettings")) {
-									parentItem = parentItem.parent
-								}
-								if (parentItem && parentItem.navigateToSettings) {
-									parentItem.navigateToSettings()
-						}
-					}
+				MouseArea {
+					anchors.fill: parent
+					onClicked: {
+				console.log("Open", model.name)
+				// Find the shell with navigation functions
+				var shell = home.parent
+				while (shell && !shell.hasOwnProperty("navigateTo")) {
+					shell = shell.parent
+				}
+				if (shell && shell.navigateTo) {
+					shell.navigateTo(model.name)
 				}
 			}
 		}
+	}
 	}
 }

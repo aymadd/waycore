@@ -31,6 +31,7 @@ class SensorBridge(QObject):
     temperatureChanged = Signal()
     connectionChanged = Signal()
     systemInfoChanged = Signal()
+    compassChanged = Signal()
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -56,6 +57,11 @@ class SensorBridge(QObject):
         self._device_model = "Unknown"
         self._os_version = "Unknown"
         self._hostname = "waycore"
+
+        # Compass
+        self._compass_heading = 0.0
+        self._compass_cardinal = "N"
+        self._compass_calibrated = True
 
         # Update timer
         self._timer = QTimer(self)
@@ -155,6 +161,33 @@ class SensorBridge(QObject):
             except Exception:
                 pass  # Keep default values
 
+    def _update_compass(self) -> None:
+        """Fetch compass data from backend."""
+        if self._client and self._connected:
+            try:
+                data = self._client.get_compass()
+                self._compass_heading = data["heading_degrees"]
+                self._compass_cardinal = data["heading_cardinal"]
+                self._compass_calibrated = data["calibrated"]
+                self.compassChanged.emit()
+                return
+            except Exception as e:
+                logger.debug(f"Failed to get compass data: {e}")
+
+        # Mock compass (slow rotation for testing)
+        import time
+
+        self._compass_heading = (time.time() * 5) % 360  # 5 degrees per second
+        self._compass_cardinal = self._heading_to_cardinal(self._compass_heading)
+        self.compassChanged.emit()
+
+    @staticmethod
+    def _heading_to_cardinal(heading: float) -> str:
+        """Convert heading to cardinal direction."""
+        directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+        index = int((heading + 22.5) / 45) % 8
+        return directions[index]
+
     # --- Qt Properties for QML binding ---
 
     @Property(str, notify=timeChanged)  # type: ignore[arg-type]
@@ -209,6 +242,18 @@ class SensorBridge(QObject):
     def hostname(self) -> str:
         return self._hostname
 
+    @Property(float, notify=compassChanged)  # type: ignore[arg-type]
+    def compassHeading(self) -> float:
+        return self._compass_heading
+
+    @Property(str, notify=compassChanged)  # type: ignore[arg-type]
+    def compassCardinal(self) -> str:
+        return self._compass_cardinal
+
+    @Property(bool, notify=compassChanged)  # type: ignore[arg-type]
+    def compassCalibrated(self) -> bool:
+        return self._compass_calibrated
+
     # --- Slots for QML to call ---
 
     @Slot()  # type: ignore[arg-type]
@@ -241,3 +286,24 @@ class SensorBridge(QObject):
         if self._battery_level > 20:
             return "#D4A574"  # warning
         return "#C97064"  # error
+
+    @Slot()  # type: ignore[arg-type]
+    def refreshCompass(self) -> None:
+        """Refresh compass data (called at higher frequency)."""
+        self._update_compass()
+
+    @Slot()  # type: ignore[arg-type]
+    def calibrateCompass(self) -> None:
+        """Start compass calibration."""
+        if self._client and self._connected:
+            try:
+                self._client.calibrate_compass()
+                self._compass_calibrated = True
+                self.compassChanged.emit()
+                logger.info("Compass calibration started")
+            except Exception as e:
+                logger.error(f"Failed to calibrate compass: {e}")
+        else:
+            # Mock calibration
+            self._compass_calibrated = True
+            self.compassChanged.emit()
