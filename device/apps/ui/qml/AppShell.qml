@@ -6,36 +6,24 @@ import "components" as UI
 Item {
 	id: shell
 
-	Column {
-		anchors.fill: parent
-		spacing: App.Theme.spacingSmall
+	App.StatusBar {
+		id: status
+		anchors.top: parent.top
+		anchors.left: parent.left
+		anchors.right: parent.right
+		height: App.Theme.appBarHeight
+	}
 
-		StatusBar {
-			id: status
-			width: parent.width
-			height: App.Theme.appBarHeight
-		}
-
-		// Simple navigation controls for MVP
-		Row {
-			spacing: App.Theme.spacingSmall
-			anchors.horizontalCenter: parent.horizontalCenter
-			UI.Button { text: "Home"; onClicked: { router.clear(); router.push("Home.qml") } }
-			UI.Button { text: "Settings"; onClicked: { router.push("Settings.qml") } }
-			UI.Button { text: "Back"; onClicked: { if (router.depth > 1) router.pop() } }
-		}
-
-		StackView {
-			id: router
-			anchors.left: parent.left
-			anchors.right: parent.right
-			anchors.top: status.bottom
-			anchors.bottom: parent.bottom
-			initialItem: Qt.resolvedUrl("Home.qml")
-		}
+	// Direct Home without StackView for testing
+	App.Home {
+		id: homeScreen
+		anchors.top: status.bottom
+		anchors.bottom: parent.bottom
+		anchors.left: parent.left
+		anchors.right: parent.right
 	}
 
 	function navigateToSettings() {
-		router.push("Settings.qml")
+		console.log("Navigate to settings")
 	}
 }

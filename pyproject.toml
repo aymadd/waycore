@@ -6,6 +6,9 @@ authors = ["Waycore Contributors"]
 readme = "README.md"
 packages = [{ include = "device" }]
 
+[tool.poetry.scripts]
+waycore-ui = "device.apps.ui.main:main"
+
 [tool.poetry.dependencies]
 python = "^3.11"
 pydantic = "^2.7"

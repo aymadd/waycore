@@ -1,49 +1,85 @@
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import "." as App
 
 Rectangle {
 	id: home
 	color: App.Theme.background
 
-	ColumnLayout {
-		anchors.fill: parent
-		anchors.margins: App.Theme.spacingLarge
-		spacing: App.Theme.spacingLarge
+	Component.onCompleted: {
+		console.log("Home component loaded, size:", width, "x", height)
+	}
 
 		Text {
+		id: title
 			text: "Waycore"
 			color: App.Theme.textPrimary
 			font.pixelSize: App.Theme.h2Size
-			Layout.alignment: Qt.AlignHCenter
+		anchors.top: parent.top
+		anchors.horizontalCenter: parent.horizontalCenter
+		anchors.topMargin: App.Theme.spacingLarge
+	}
+
+	GridView {
+			id: grid
+		anchors.top: title.bottom
+		anchors.bottom: parent.bottom
+		anchors.left: parent.left
+		anchors.right: parent.right
+		anchors.margins: App.Theme.spacingLarge
+		clip: true
+
+		cellWidth: Math.max(100, Math.floor(width / 3))
+		cellHeight: 120
+
+		Component.onCompleted: {
+			console.log("GridView loaded - size:", width, "x", height, "cellWidth:", cellWidth, "model count:", model.count)
 		}
 
-		GridLayout {
-			id: grid
-			columns: 3
-			rowSpacing: App.Theme.spacingLarge
-			columnSpacing: App.Theme.spacingLarge
-			Layout.alignment: Qt.AlignHCenter
+		model: ListModel {
+			ListElement { name: "AI"; icon: "🤖" }
+			ListElement { name: "Maps"; icon: "🗺️" }
+			ListElement { name: "Compass"; icon: "🧭" }
+			ListElement { name: "Meshtastic"; icon: "📡" }
+			ListElement { name: "Settings"; icon: "⚙️" }
+		}
 
-			repeater: Repeater {
-				model: [
-					{ name: "AI", color: App.Theme.surfaceElevated },
-					{ name: "Map", color: App.Theme.surfaceElevated },
-					{ name: "Settings", color: App.Theme.surfaceElevated }
-				]
 				delegate: Rectangle {
-					width: 96; height: 96
-					color: modelData.color
+			width: grid.cellWidth - App.Theme.spacingSmall
+			height: grid.cellHeight - App.Theme.spacingSmall
+			color: App.Theme.surfaceElevated
 					radius: 8
-					Text {
+					border.color: App.Theme.divider
+					border.width: 1
+
+					Column {
 						anchors.centerIn: parent
-						text: modelData.name
-						color: App.Theme.textPrimary
-						font.pixelSize: App.Theme.bodySize
+						spacing: App.Theme.spacingSmall
+
+						Text {
+							anchors.horizontalCenter: parent.horizontalCenter
+					text: model.icon
+							font.pixelSize: 32
+						}
+						Text {
+							anchors.horizontalCenter: parent.horizontalCenter
+					text: model.name
+							color: App.Theme.textPrimary
+							font.pixelSize: App.Theme.bodySize
+						}
 					}
+
 					MouseArea {
 						anchors.fill: parent
-						onClicked: console.log("Open", modelData.name)
+						onClicked: {
+					console.log("Open", model.name)
+					if (model.name === "Settings") {
+								var parentItem = home.parent
+								while (parentItem && !parentItem.hasOwnProperty("navigateToSettings")) {
+									parentItem = parentItem.parent
+								}
+								if (parentItem && parentItem.navigateToSettings) {
+									parentItem.navigateToSettings()
+						}
 					}
 				}
 			}

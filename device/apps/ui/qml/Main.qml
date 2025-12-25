@@ -10,7 +10,7 @@ Window {
 	color: App.Theme.background
 	title: "Waycore"
 
-	AppShell {
+	App.AppShell {
 		anchors.fill: parent
 	}
 }

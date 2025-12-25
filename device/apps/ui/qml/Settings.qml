@@ -22,6 +22,12 @@ Rectangle {
 			property bool debug: false
 			property string theme: "dark"
 			property int brightness: 75
+			property string temperatureUnit: "C"  // "C" or "F"
+		}
+
+		// Sync temperature unit setting with sensor data singleton
+		Component.onCompleted: {
+			App.SensorData.temperatureUnit = appSettings.temperatureUnit
 		}
 
 		UI.Card {
@@ -50,6 +56,26 @@ Rectangle {
 						Layout.fillWidth: true
 					}
 					Text { text: appSettings.brightness + "%"; color: App.Theme.textPrimary }
+				}
+			}
+		}
+
+		UI.Card {
+			contentItem: Column {
+				spacing: App.Theme.spacingSmall
+				Text { text: "Units"; color: App.Theme.textPrimary; font.pixelSize: App.Theme.h2Size }
+				RowLayout {
+					spacing: App.Theme.spacingSmall
+					Text { text: "Temperature"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.bodySize }
+					ComboBox {
+						model: ["Celsius (°C)", "Fahrenheit (°F)"]
+						currentIndex: appSettings.temperatureUnit === "C" ? 0 : 1
+					onActivated: {
+						appSettings.temperatureUnit = currentIndex === 0 ? "C" : "F"
+						App.SensorData.temperatureUnit = appSettings.temperatureUnit
+					}
+						Layout.fillWidth: true
+					}
 				}
 			}
 		}
