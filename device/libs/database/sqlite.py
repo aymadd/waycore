@@ -84,6 +84,19 @@ class AsyncSQLite:
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
                 updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
             );
+
+            CREATE TABLE IF NOT EXISTS sensors (
+                id TEXT PRIMARY KEY NOT NULL,
+                type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                driver TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'unknown',
+                last_value TEXT,
+                last_reading_at TEXT,
+                config TEXT,
+                discovered_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            );
             """
         )
         await self._conn.commit()
@@ -160,6 +173,8 @@ class AsyncSQLite:
         "units.temperature": "F",  # "C" or "F" - default Fahrenheit
         "units.distance": "mi",  # "km" or "mi" - default miles
         "units.weight": "lb",  # "kg" or "lb" - default pounds
+        "units.pressure": "hPa",  # "hPa", "inHg", or "mmHg" - default hectopascals
+        "units.time_format": "24h",  # "12h" or "24h" - default 24-hour
     }
 
     # Valid values for each preference key
@@ -167,6 +182,8 @@ class AsyncSQLite:
         "units.temperature": {"C", "F"},
         "units.distance": {"km", "mi"},
         "units.weight": {"kg", "lb"},
+        "units.pressure": {"hPa", "inHg", "mmHg"},
+        "units.time_format": {"12h", "24h"},
     }
 
     async def _initialize_default_preferences(self) -> None:
@@ -312,5 +329,166 @@ class AsyncSQLite:
         """Delete all notes. Returns number of deleted notes."""
         assert self._conn is not None
         cursor = await self._conn.execute("DELETE FROM notes")
+        await self._conn.commit()
+        return int(cursor.rowcount)
+
+    # --- Sensors Registry ---
+
+    async def register_sensor(
+        self,
+        sensor_id: str,
+        sensor_type: str,
+        name: str,
+        driver: str,
+        config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Register a new sensor or update existing one."""
+        assert self._conn is not None
+        config_json = json.dumps(config) if config else None
+        await self._conn.execute(
+            """
+            INSERT INTO sensors (id, type, name, driver, status, config)
+            VALUES (?, ?, ?, ?, 'online', ?)
+            ON CONFLICT(id) DO UPDATE SET
+                type = excluded.type,
+                name = excluded.name,
+                driver = excluded.driver,
+                config = excluded.config,
+                status = 'online',
+                updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            """,
+            (sensor_id, sensor_type, name, driver, config_json),
+        )
+        await self._conn.commit()
+        return await self.get_sensor(sensor_id) or {}
+
+    async def get_sensor(self, sensor_id: str) -> dict[str, Any] | None:
+        """Get a sensor by ID."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            SELECT id, type, name, driver, status, last_value,
+                   last_reading_at, config, discovered_at, updated_at
+            FROM sensors WHERE id = ?
+            """,
+            (sensor_id,),
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row:
+            return {
+                "id": row[0],
+                "type": row[1],
+                "name": row[2],
+                "driver": row[3],
+                "status": row[4],
+                "last_value": json.loads(row[5]) if row[5] else None,
+                "last_reading_at": row[6],
+                "config": json.loads(row[7]) if row[7] else None,
+                "discovered_at": row[8],
+                "updated_at": row[9],
+            }
+        return None
+
+    async def get_all_sensors(self) -> list[dict[str, Any]]:
+        """Get all registered sensors."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            SELECT id, type, name, driver, status, last_value,
+                   last_reading_at, config, discovered_at, updated_at
+            FROM sensors ORDER BY type, name
+            """
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return [
+            {
+                "id": row[0],
+                "type": row[1],
+                "name": row[2],
+                "driver": row[3],
+                "status": row[4],
+                "last_value": json.loads(row[5]) if row[5] else None,
+                "last_reading_at": row[6],
+                "config": json.loads(row[7]) if row[7] else None,
+                "discovered_at": row[8],
+                "updated_at": row[9],
+            }
+            for row in rows
+        ]
+
+    async def get_sensors_by_type(self, sensor_type: str) -> list[dict[str, Any]]:
+        """Get all sensors of a specific type."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            SELECT id, type, name, driver, status, last_value,
+                   last_reading_at, config, discovered_at, updated_at
+            FROM sensors WHERE type = ? ORDER BY name
+            """,
+            (sensor_type,),
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return [
+            {
+                "id": row[0],
+                "type": row[1],
+                "name": row[2],
+                "driver": row[3],
+                "status": row[4],
+                "last_value": json.loads(row[5]) if row[5] else None,
+                "last_reading_at": row[6],
+                "config": json.loads(row[7]) if row[7] else None,
+                "discovered_at": row[8],
+                "updated_at": row[9],
+            }
+            for row in rows
+        ]
+
+    async def update_sensor_reading(
+        self, sensor_id: str, value: dict[str, Any], status: str = "online"
+    ) -> bool:
+        """Update a sensor's last reading."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            UPDATE sensors SET
+                last_value = ?,
+                last_reading_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+                status = ?,
+                updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            WHERE id = ?
+            """,
+            (json.dumps(value), status, sensor_id),
+        )
+        await self._conn.commit()
+        return bool(cursor.rowcount > 0)
+
+    async def update_sensor_status(self, sensor_id: str, status: str) -> bool:
+        """Update a sensor's status (online, offline, error, calibrating)."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            UPDATE sensors SET status = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            WHERE id = ?
+            """,
+            (status, sensor_id),
+        )
+        await self._conn.commit()
+        return bool(cursor.rowcount > 0)
+
+    async def unregister_sensor(self, sensor_id: str) -> bool:
+        """Remove a sensor from the registry."""
+        assert self._conn is not None
+        cursor = await self._conn.execute("DELETE FROM sensors WHERE id = ?", (sensor_id,))
+        await self._conn.commit()
+        return bool(cursor.rowcount > 0)
+
+    async def clear_all_sensors(self) -> int:
+        """Remove all sensors from the registry."""
+        assert self._conn is not None
+        cursor = await self._conn.execute("DELETE FROM sensors")
         await self._conn.commit()
         return int(cursor.rowcount)

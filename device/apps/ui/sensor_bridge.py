@@ -32,6 +32,7 @@ class SensorBridge(QObject):
     connectionChanged = Signal()
     systemInfoChanged = Signal()
     compassChanged = Signal()
+    sensorsChanged = Signal()
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -70,6 +71,9 @@ class SensorBridge(QObject):
 
         # Elevation (None means unavailable)
         self._elevation_m: float | None = None
+
+        # Sensor registry (list of discovered sensors)
+        self._sensors: list[dict] = []
 
         # Update timer
         self._timer = QTimer(self)
@@ -382,3 +386,130 @@ class SensorBridge(QObject):
             success = False
 
         return success
+
+    # --- Sensor Registry ---
+
+    @Property("QVariantList", notify=sensorsChanged)  # type: ignore[arg-type]
+    def sensors(self) -> list[dict]:
+        """Get all registered sensors."""
+        return self._sensors
+
+    @Slot()  # type: ignore[arg-type]
+    def refreshSensors(self) -> None:
+        """Refresh the sensor registry from backend."""
+        if self._client and self._connected:
+            try:
+                self._sensors = self._client.get_all_sensors()
+                self.sensorsChanged.emit()
+                logger.debug(f"Loaded {len(self._sensors)} sensors from registry")
+            except Exception as e:
+                logger.error(f"Failed to load sensors: {e}")
+                self._use_mock_sensors()
+        else:
+            self._use_mock_sensors()
+
+    @Slot(result="QVariantList")  # type: ignore[arg-type]
+    def getSensorsByType(self, sensor_type: str) -> list[dict]:
+        """Get sensors filtered by type."""
+        return [s for s in self._sensors if s.get("type") == sensor_type]
+
+    @Slot(result=bool)  # type: ignore[arg-type]
+    def discoverSensors(self) -> bool:
+        """Run sensor discovery on the backend."""
+        if self._client and self._connected:
+            try:
+                result = self._client.discover_sensors()
+                self._sensors = result.get("sensors", [])
+                self.sensorsChanged.emit()
+                logger.info(f"Discovered {len(self._sensors)} sensors")
+                return True
+            except Exception as e:
+                logger.error(f"Sensor discovery failed: {e}")
+        return False
+
+    def _use_mock_sensors(self) -> None:
+        """Use mock sensor data when backend is unavailable."""
+
+        now = datetime.now().isoformat()
+        self._sensors = [
+            {
+                "id": "mock_gps",
+                "type": "gps",
+                "name": "GPS Module",
+                "driver": "mock.gps",
+                "status": "online",
+                "last_value": {
+                    "latitude": 37.7749,
+                    "longitude": -122.4194,
+                    "accuracy_m": 5.0,
+                    "has_fix": True,
+                },
+                "last_reading_at": now,
+            },
+            {
+                "id": "mock_temp",
+                "type": "temperature",
+                "name": "Temperature Sensor",
+                "driver": "mock.temperature",
+                "status": "online",
+                "last_value": {
+                    "celsius": self._temperature_celsius,
+                    "fahrenheit": self._temperature_celsius * 9 / 5 + 32,
+                },
+                "last_reading_at": now,
+            },
+            {
+                "id": "mock_pressure",
+                "type": "pressure",
+                "name": "Barometer",
+                "driver": "mock.pressure",
+                "status": "online",
+                "last_value": {"hPa": 1013.25, "altitude_m": 52.0},
+                "last_reading_at": now,
+            },
+            {
+                "id": "mock_accel",
+                "type": "accelerometer",
+                "name": "Accelerometer",
+                "driver": "mock.accelerometer",
+                "status": "online",
+                "last_value": {"x": 0.02, "y": -0.01, "z": 1.00, "unit": "g"},
+                "last_reading_at": now,
+            },
+            {
+                "id": "mock_mag",
+                "type": "magnetometer",
+                "name": "Magnetometer",
+                "driver": "mock.magnetometer",
+                "status": "online" if self._compass_calibrated else "calibrating",
+                "last_value": {
+                    "heading": self._compass_heading,
+                    "cardinal": self._compass_cardinal,
+                    "calibrated": self._compass_calibrated,
+                },
+                "last_reading_at": now,
+            },
+            {
+                "id": "mock_light",
+                "type": "light",
+                "name": "Light Sensor",
+                "driver": "mock.light",
+                "status": "online",
+                "last_value": {"lux": 350, "condition": "Indoor"},
+                "last_reading_at": now,
+            },
+            {
+                "id": "mock_battery",
+                "type": "battery",
+                "name": "Battery Monitor",
+                "driver": "mock.battery",
+                "status": "online",
+                "last_value": {
+                    "level": self._battery_level,
+                    "charging": self._battery_charging,
+                    "voltage": self._battery_voltage,
+                },
+                "last_reading_at": now,
+            },
+        ]
+        self.sensorsChanged.emit()

@@ -307,4 +307,145 @@ def create_app(service: CoreDaemonService) -> FastAPI:
             "message": "Factory reset complete. All data cleared.",
         }
 
+    # --- Sensor Registry ---
+
+    @app.get("/api/sensors/registry")  # type: ignore[misc]
+    async def get_all_sensors() -> list[dict[str, Any]]:
+        """
+        Get all registered sensors.
+
+        Returns a list of sensor info including status, last reading, etc.
+        """
+        from device.libs.sensors import get_registry
+
+        registry = get_registry()
+
+        # If discovery hasn't run yet, run it now
+        if not registry._discovery_complete:
+            await registry.discover_sensors()
+
+        # Update readings for each sensor with current mock values
+        _update_sensor_readings(registry)
+
+        return [s.to_dict() for s in registry.sensors]
+
+    @app.get("/api/sensors/registry/{sensor_id}")  # type: ignore[misc]
+    async def get_sensor(sensor_id: str) -> dict[str, Any]:
+        """Get a specific sensor by ID."""
+        from device.libs.sensors import get_registry
+
+        registry = get_registry()
+        sensor = registry.get_sensor(sensor_id)
+        if not sensor:
+            raise HTTPException(status_code=404, detail=f"Sensor {sensor_id} not found")
+        return sensor.to_dict()
+
+    @app.get("/api/sensors/registry/type/{sensor_type}")  # type: ignore[misc]
+    async def get_sensors_by_type(sensor_type: str) -> list[dict[str, Any]]:
+        """Get all sensors of a specific type."""
+        from device.libs.sensors import SensorType, get_registry
+
+        registry = get_registry()
+        try:
+            st = SensorType(sensor_type)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid sensor type: {sensor_type}"
+            ) from e
+        return [s.to_dict() for s in registry.get_sensors_by_type(st)]
+
+    @app.post("/api/sensors/registry/discover")  # type: ignore[misc]
+    async def discover_sensors() -> dict[str, Any]:
+        """
+        Run sensor discovery.
+
+        This scans for available sensors and registers them.
+        In mock mode, registers mock sensors for development.
+        """
+        from device.libs.sensors import get_registry
+
+        registry = get_registry()
+        registry.clear()  # Clear existing sensors before rediscovery
+        discovered = await registry.discover_sensors()
+        return {
+            "success": True,
+            "sensors_discovered": len(discovered),
+            "mock_mode": registry.is_mock_mode,
+            "sensors": [s.to_dict() for s in discovered],
+        }
+
+    def _update_sensor_readings(registry: Any) -> None:
+        """Update sensor readings with current mock values."""
+        from device.libs.sensors.registry import SensorStatus
+
+        # Update GPS
+        _update_mock_gps()
+        registry.update_reading(
+            "mock_gps",
+            {
+                "latitude": _gps_state["latitude"],
+                "longitude": _gps_state["longitude"],
+                "accuracy_m": _gps_state["accuracy_m"],
+                "has_fix": _gps_state["has_fix"],
+                "satellites": 8,
+            },
+            SensorStatus.ONLINE if _gps_state["has_fix"] else SensorStatus.ERROR,
+        )
+
+        # Update Temperature
+        _update_mock_temperature()
+        registry.update_reading(
+            "mock_temp",
+            {
+                "celsius": _temperature_state["celsius"],
+                "fahrenheit": _temperature_state["celsius"] * 9 / 5 + 32,
+            },
+            SensorStatus.ONLINE,
+        )
+
+        # Update Pressure (barometer)
+        registry.update_reading(
+            "mock_pressure",
+            {"hPa": 1013.25, "altitude_m": _elevation_state["meters"]},
+            SensorStatus.ONLINE,
+        )
+
+        # Update Accelerometer
+        registry.update_reading(
+            "mock_accel",
+            {"x": 0.02, "y": -0.01, "z": 1.00, "unit": "g"},
+            SensorStatus.ONLINE,
+        )
+
+        # Update Magnetometer
+        _update_mock_compass()
+        registry.update_reading(
+            "mock_mag",
+            {
+                "heading": _compass_state["heading"],
+                "cardinal": _heading_to_cardinal(_compass_state["heading"]),
+                "calibrated": _compass_state["calibrated"],
+            },
+            SensorStatus.ONLINE if _compass_state["calibrated"] else SensorStatus.CALIBRATING,
+        )
+
+        # Update Light sensor
+        registry.update_reading(
+            "mock_light",
+            {"lux": 350, "condition": "Indoor"},
+            SensorStatus.ONLINE,
+        )
+
+        # Update Battery
+        _update_mock_battery()
+        registry.update_reading(
+            "mock_battery",
+            {
+                "level": _battery_state["level"],
+                "charging": _battery_state["is_charging"],
+                "voltage": _battery_state["voltage"],
+            },
+            SensorStatus.ONLINE,
+        )
+
     return app

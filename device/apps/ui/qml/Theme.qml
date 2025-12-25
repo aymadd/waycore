@@ -34,9 +34,12 @@ QtObject {
 	// Typography
 	readonly property int h1Size: 32
 	readonly property int h2Size: 24
+	readonly property int h3Size: 18
 	readonly property int bodySize: 14
+	readonly property int captionSize: 12
 
 	// Spacing
+	readonly property int spacingExtraSmall: 4
 	readonly property int spacingXS: 4
 	readonly property int spacingSmall: 8
 	readonly property int spacingMedium: 16

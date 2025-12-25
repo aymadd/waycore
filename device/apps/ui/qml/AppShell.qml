@@ -34,6 +34,26 @@ Item {
 		}
 
 		Component {
+			id: settingsGeneralComponent
+			App.SettingsGeneral {}
+		}
+
+		Component {
+			id: settingsControlsComponent
+			App.SettingsControls {}
+		}
+
+		Component {
+			id: settingsSensorsComponent
+			App.SettingsSensors {}
+		}
+
+		Component {
+			id: settingsInfoComponent
+			App.SettingsInfo {}
+		}
+
+		Component {
 			id: compassComponent
 			App.Compass {}
 		}
@@ -54,6 +74,18 @@ Item {
 		switch (appName) {
 			case "Settings":
 				router.push(settingsComponent)
+				break
+			case "SettingsGeneral":
+				router.push(settingsGeneralComponent)
+				break
+			case "SettingsControls":
+				router.push(settingsControlsComponent)
+				break
+			case "SettingsSensors":
+				router.push(settingsSensorsComponent)
+				break
+			case "SettingsInfo":
+				router.push(settingsInfoComponent)
 				break
 			case "Compass":
 				router.push(compassComponent)

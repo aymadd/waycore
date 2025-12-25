@@ -96,6 +96,24 @@ class CoreDaemonClient(APIClient):
         """Trigger factory reset."""
         return self.post("/api/system/factory-reset", json={})
 
+    # --- Sensor Registry ---
+
+    def get_all_sensors(self) -> list[dict[str, Any]]:
+        """Get all registered sensors from the registry."""
+        return self.get("/api/sensors/registry")  # type: ignore[return-value]
+
+    def get_sensor(self, sensor_id: str) -> dict[str, Any]:
+        """Get a specific sensor by ID."""
+        return self.get(f"/api/sensors/registry/{sensor_id}")
+
+    def get_sensors_by_type(self, sensor_type: str) -> list[dict[str, Any]]:
+        """Get all sensors of a specific type."""
+        return self.get(f"/api/sensors/registry/type/{sensor_type}")  # type: ignore[return-value]
+
+    def discover_sensors(self) -> dict[str, Any]:
+        """Run sensor discovery."""
+        return self.post("/api/sensors/registry/discover", json={})
+
 
 class DataLoggerClient(APIClient):
     """Client for Data Logger service (preferences, history, notes)."""
