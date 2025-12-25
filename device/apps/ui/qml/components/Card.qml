@@ -6,8 +6,9 @@ Rectangle {
 	color: App.Theme.surface
 	radius: 8
 	border.color: App.Theme.divider
-	property alias contentItem: content
-	default property alias data: content.data
+	implicitHeight: content.implicitHeight + App.Theme.spacingMedium * 2
+
+	default property alias children: content.data
 
 	Column {
 		id: content

@@ -70,9 +70,17 @@ class AsyncSQLite:
                 results TEXT NOT NULL,
                 error_message TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS user_preferences (
+                key TEXT PRIMARY KEY NOT NULL,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            );
             """
         )
         await self._conn.commit()
+        # Initialize default preferences if table is empty
+        await self._initialize_default_preferences()
 
     async def log_event(self, topic: str, payload: str) -> None:
         assert self._conn is not None
@@ -136,3 +144,82 @@ class AsyncSQLite:
         rows = await cursor.fetchall()
         await cursor.close()
         return [dict(zip(cols, row)) for row in rows]
+
+    # --- User Preferences ---
+
+    # Default preference values
+    DEFAULT_PREFERENCES: dict[str, str] = {
+        "units.temperature": "C",  # "C" or "F"
+        "units.distance": "km",  # "km" or "mi"
+        "units.weight": "kg",  # "kg" or "lb"
+    }
+
+    # Valid values for each preference key
+    PREFERENCE_VALIDATORS: dict[str, set[str]] = {
+        "units.temperature": {"C", "F"},
+        "units.distance": {"km", "mi"},
+        "units.weight": {"kg", "lb"},
+    }
+
+    async def _initialize_default_preferences(self) -> None:
+        """Initialize default preferences if not already set."""
+        assert self._conn is not None
+        for key, value in self.DEFAULT_PREFERENCES.items():
+            await self._conn.execute(
+                """
+                INSERT OR IGNORE INTO user_preferences (key, value)
+                VALUES (?, ?)
+                """,
+                (key, value),
+            )
+        await self._conn.commit()
+
+    async def get_preference(self, key: str) -> str | None:
+        """Get a single preference value by key."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            "SELECT value FROM user_preferences WHERE key = ?", (key,)
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+        return row[0] if row else None
+
+    async def get_all_preferences(self) -> dict[str, str]:
+        """Get all preference key-value pairs."""
+        assert self._conn is not None
+        cursor = await self._conn.execute("SELECT key, value FROM user_preferences")
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return {row[0]: row[1] for row in rows}
+
+    async def set_preference(self, key: str, value: str) -> bool:
+        """
+        Set a preference value.
+
+        Returns True if successful, False if validation fails.
+        """
+        assert self._conn is not None
+
+        # Validate value if validator exists
+        if key in self.PREFERENCE_VALIDATORS:
+            if value not in self.PREFERENCE_VALIDATORS[key]:
+                return False
+
+        await self._conn.execute(
+            """
+            INSERT INTO user_preferences (key, value, updated_at)
+            VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = excluded.updated_at
+            """,
+            (key, value),
+        )
+        await self._conn.commit()
+        return True
+
+    async def reset_preferences(self) -> None:
+        """Reset all preferences to defaults."""
+        assert self._conn is not None
+        await self._conn.execute("DELETE FROM user_preferences")
+        await self._initialize_default_preferences()

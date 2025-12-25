@@ -1,11 +1,52 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from .base import BaseMessage
+
+# --- API Response Models ---
+
+
+class SystemTimeResponse(BaseModel):
+    """Response for /api/system/time endpoint."""
+
+    timestamp: datetime = Field(..., description="Current system time in UTC")
+    timezone: str = Field(..., description="System timezone (e.g., 'UTC', 'America/New_York')")
+    uptime_seconds: int = Field(..., ge=0, description="System uptime in seconds")
+
+
+class BatteryResponse(BaseModel):
+    """Response for /api/system/battery endpoint."""
+
+    level: int = Field(..., ge=0, le=100, description="Battery level 0-100%")
+    is_charging: bool = Field(..., description="Whether battery is charging")
+    voltage: float = Field(..., gt=0, description="Battery voltage")
+    estimated_minutes: int | None = Field(
+        None, ge=0, description="Estimated minutes remaining (None if charging)"
+    )
+
+
+class TemperatureResponse(BaseModel):
+    """Response for /api/system/temperature endpoint."""
+
+    celsius: float = Field(..., description="Temperature in Celsius")
+    source: str = Field(..., description="Sensor source (mock, cpu, external)")
+    timestamp: datetime = Field(..., description="Reading timestamp")
+
+
+class SystemInfoResponse(BaseModel):
+    """Response for /api/system/info endpoint."""
+
+    app_version: str = Field(..., description="Application version")
+    build_date: str | None = Field(None, description="Build date if available")
+    device_model: str = Field(..., description="Device model (e.g., Raspberry Pi 5)")
+    os_version: str = Field(..., description="Operating system version")
+    python_version: str = Field(..., description="Python version")
+    hostname: str = Field(..., description="Device hostname")
 
 
 class SystemMode(str, Enum):

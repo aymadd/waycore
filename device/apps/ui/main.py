@@ -13,6 +13,8 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
+from .sensor_bridge import SensorBridge
+
 
 def main() -> int:
     """
@@ -26,6 +28,10 @@ def main() -> int:
     app.setOrganizationName("Waycore")
 
     engine = QQmlApplicationEngine()
+
+    # Create and register the sensor bridge for backend communication
+    sensor_bridge = SensorBridge()
+    engine.rootContext().setContextProperty("SensorBridge", sensor_bridge)
 
     # Get the QML directory path
     qml_dir = Path(__file__).parent / "qml"

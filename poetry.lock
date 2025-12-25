@@ -1048,7 +1048,7 @@ version = "6.10.1"
 description = "Python bindings for the Qt cross-platform application and UI framework"
 optional = false
 python-versions = "<3.15,>=3.9"
-groups = ["main"]
+groups = ["ui"]
 markers = "python_version < \"3.15\""
 files = [
     {file = "pyside6-6.10.1-cp39-abi3-macosx_13_0_universal2.whl", hash = "sha256:d0e70dd0e126d01986f357c2a555722f9462cf8a942bf2ce180baf69f468e516"},
@@ -1069,7 +1069,7 @@ version = "6.10.1"
 description = "Python bindings for the Qt cross-platform application and UI framework (Addons)"
 optional = false
 python-versions = "<3.15,>=3.9"
-groups = ["main"]
+groups = ["ui"]
 markers = "python_version < \"3.15\""
 files = [
     {file = "pyside6_addons-6.10.1-cp39-abi3-macosx_13_0_universal2.whl", hash = "sha256:4d2b82bbf9b861134845803837011e5f9ac7d33661b216805273cf0c6d0f8e82"},
@@ -1089,7 +1089,7 @@ version = "6.10.1"
 description = "Python bindings for the Qt cross-platform application and UI framework (Essentials)"
 optional = false
 python-versions = "<3.15,>=3.9"
-groups = ["main"]
+groups = ["ui"]
 markers = "python_version < \"3.15\""
 files = [
     {file = "pyside6_essentials-6.10.1-cp39-abi3-macosx_13_0_universal2.whl", hash = "sha256:cd224aff3bb26ff1fca32c050e1c4d0bd9f951a96219d40d5f3d0128485b0bbe"},
@@ -1350,7 +1350,7 @@ version = "6.10.1"
 description = "Python/C++ bindings helper module"
 optional = false
 python-versions = "<3.15,>=3.9"
-groups = ["main"]
+groups = ["ui"]
 markers = "python_version < \"3.15\""
 files = [
     {file = "shiboken6-6.10.1-cp39-abi3-macosx_13_0_universal2.whl", hash = "sha256:9f2990f5b61b0b68ecadcd896ab4441f2cb097eef7797ecc40584107d9850d71"},
@@ -1775,4 +1775,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "efef5e718b4c3f731f07df137ef60d6d16fe83b72b14006b39495bd80e63f0ed"
+content-hash = "2f8db2dad340541c78cf13d69f1769041262db2949e6baca487e561b70cd6190"

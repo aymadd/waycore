@@ -37,3 +37,80 @@ async def test_sqlite_open_insert_fetch(tmp_path) -> None:  # type: ignore[no-un
         assert results[0]["label"] == "answer"
     finally:
         await db.close()
+
+
+@pytest.mark.asyncio
+async def test_preferences_default_values(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Test that default preferences are initialized on database open."""
+    dbfile = tmp_path / "db.sqlite3"
+    db = AsyncSQLite(dbfile)
+    await db.open()
+    try:
+        prefs = await db.get_all_preferences()
+        assert prefs["units.temperature"] == "C"
+        assert prefs["units.distance"] == "km"
+        assert prefs["units.weight"] == "kg"
+    finally:
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_preferences_get_set(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Test getting and setting preferences."""
+    dbfile = tmp_path / "db.sqlite3"
+    db = AsyncSQLite(dbfile)
+    await db.open()
+    try:
+        # Get default value
+        temp_unit = await db.get_preference("units.temperature")
+        assert temp_unit == "C"
+
+        # Set new valid value
+        success = await db.set_preference("units.temperature", "F")
+        assert success is True
+
+        # Verify new value
+        temp_unit = await db.get_preference("units.temperature")
+        assert temp_unit == "F"
+    finally:
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_preferences_validation(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Test that invalid preference values are rejected."""
+    dbfile = tmp_path / "db.sqlite3"
+    db = AsyncSQLite(dbfile)
+    await db.open()
+    try:
+        # Try to set invalid value
+        success = await db.set_preference("units.temperature", "K")  # Kelvin not allowed
+        assert success is False
+
+        # Value should still be default
+        temp_unit = await db.get_preference("units.temperature")
+        assert temp_unit == "C"
+    finally:
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_preferences_reset(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Test resetting preferences to defaults."""
+    dbfile = tmp_path / "db.sqlite3"
+    db = AsyncSQLite(dbfile)
+    await db.open()
+    try:
+        # Change a preference
+        await db.set_preference("units.temperature", "F")
+        await db.set_preference("units.distance", "mi")
+
+        # Reset all
+        await db.reset_preferences()
+
+        # Verify defaults restored
+        prefs = await db.get_all_preferences()
+        assert prefs["units.temperature"] == "C"
+        assert prefs["units.distance"] == "km"
+    finally:
+        await db.close()

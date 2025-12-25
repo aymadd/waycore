@@ -57,6 +57,24 @@ class DataLoggerService(BaseService):
     async def latest_events(self, n: int = 50) -> list[dict[str, Any]]:
         return await self._db.fetch_latest("events", n)
 
+    # --- Preferences ---
+
+    async def get_all_preferences(self) -> dict[str, str]:
+        """Get all user preferences."""
+        return await self._db.get_all_preferences()
+
+    async def get_preference(self, key: str) -> str | None:
+        """Get a single preference value."""
+        return await self._db.get_preference(key)
+
+    async def set_preference(self, key: str, value: str) -> bool:
+        """Set a preference value. Returns False if validation fails."""
+        return await self._db.set_preference(key, value)
+
+    async def reset_preferences(self) -> None:
+        """Reset all preferences to defaults."""
+        await self._db.reset_preferences()
+
     # Handlers
     def _on_comms(self, topic: str, payload: bytes) -> None:
         try:
