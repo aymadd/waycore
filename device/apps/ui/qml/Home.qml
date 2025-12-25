@@ -40,6 +40,11 @@ Rectangle {
 			ListElement { name: "Maps"; icon: "🗺️" }
 			ListElement { name: "Compass"; icon: "🧭" }
 			ListElement { name: "Meshtastic"; icon: "📡" }
+			ListElement { name: "Camera"; icon: "📷" }
+			ListElement { name: "Notes"; icon: "📝" }
+			ListElement { name: "Flashlight"; icon: "🔦" }
+			ListElement { name: "SOS"; icon: "🆘" }
+			ListElement { name: "Modules"; icon: "🔌" }
 			ListElement { name: "Settings"; icon: "⚙️" }
 		}
 
