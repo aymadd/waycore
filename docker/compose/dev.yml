@@ -89,6 +89,8 @@ services:
     container_name: waycore-ai-service
     environment:
       - AI_SERVICE_CONFIG=/app/device/services/ai_service/config/default.yaml
+      - WAYCORE_MODEL_PATH=/opt/waycore/models
+      - USE_UNIX_SOCKET=false  # Use HTTP for local dev (UI runs outside Docker)
     ports:
       - "8010:8010"
     depends_on:
@@ -97,6 +99,8 @@ services:
       - waycore-dev
     volumes:
       - waycore-sockets:/tmp/waycore
+      - waycore-models:/opt/waycore/models  # Persistent model storage
+      - waycore-data:/app/data  # AI database files
 
   camera-service:
     build:
@@ -147,3 +151,4 @@ volumes:
   waycore-sockets:
   waycore-data:
   waycore-photos:
+  waycore-models:  # AI model storage

@@ -85,7 +85,7 @@ def _preprocess_qa(input_data: dict[str, Any]) -> QAPreprocessed:
     """
     Normalize QA inputs:
       - question: str (required, non-empty)
-      - context: str | list[str] (required, non-empty after normalization)
+      - context: str | list[str] (optional, can be empty for simple Q&A)
     """
     if not isinstance(input_data, dict):
         raise PreprocessingError("input_data must be a dictionary for QA tasks")
@@ -97,20 +97,19 @@ def _preprocess_qa(input_data: dict[str, Any]) -> QAPreprocessed:
     if not isinstance(question, str) or len(question.strip()) == 0:
         raise PreprocessingError("'question' must be a non-empty string")
 
-    normalized_context: list[str]
-    if isinstance(context, str):
-        if len(context.strip()) == 0:
-            raise PreprocessingError("'context' must not be an empty string")
-        normalized_context = [context]
+    # Context is optional - allow empty string, None, or missing
+    normalized_context: list[str] = []
+    if context is None or context == "":
+        # No context provided - that's okay for simple Q&A
+        normalized_context = []
+    elif isinstance(context, str):
+        if len(context.strip()) > 0:
+            normalized_context = [context.strip()]
     elif isinstance(context, list):
-        if not all(isinstance(c, str) and len(c.strip()) > 0 for c in context):
-            raise PreprocessingError("'context' list must contain non-empty strings")
-        normalized_context = context
+        # Filter out empty strings from the list
+        normalized_context = [c.strip() for c in context if isinstance(c, str) and c.strip()]
     else:
         raise PreprocessingError("'context' must be a string or a list of strings")
-
-    if len(normalized_context) == 0:
-        raise PreprocessingError("'context' must not be empty")
 
     if not isinstance(options, dict):
         raise PreprocessingError("'options' must be a dictionary if provided")

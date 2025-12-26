@@ -15,6 +15,7 @@ from PySide6.QtCore import QFileSystemWatcher, QObject, QUrl, Signal, Slot
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
+from .ai_bridge import AIBridge
 from .camera_bridge import CameraBridge
 from .mesh_bridge import MeshBridge
 from .notes_bridge import NotesBridge
@@ -29,6 +30,10 @@ if DEV_MODE:
 
 # Enable Qt Virtual Keyboard for touchscreen input
 os.environ["QT_IM_MODULE"] = "qtvirtualkeyboard"
+
+# Use Fusion style for cross-platform customizable controls
+# This prevents "The current style does not support customization" warnings
+os.environ["QT_QUICK_CONTROLS_STYLE"] = "Fusion"
 
 
 class QmlReloader(QObject):
@@ -133,10 +138,12 @@ def main() -> int:
     notes_bridge = NotesBridge()
     mesh_bridge = MeshBridge()
     camera_bridge = CameraBridge()
+    ai_bridge = AIBridge()
     engine.rootContext().setContextProperty("SensorBridge", sensor_bridge)
     engine.rootContext().setContextProperty("NotesBridge", notes_bridge)
     engine.rootContext().setContextProperty("MeshBridge", mesh_bridge)
     engine.rootContext().setContextProperty("CameraBridge", camera_bridge)
+    engine.rootContext().setContextProperty("AIBridge", ai_bridge)
 
     # Get the QML directory path
     qml_dir = Path(__file__).parent / "qml"

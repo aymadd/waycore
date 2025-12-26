@@ -1,101 +1,222 @@
 # Run Waycore Locally with Docker (Dev)
 
-This guide covers running the development stack with Docker Compose, including the MQTT broker and core services.
+This guide covers running the development stack with Docker Compose, including
+the MQTT broker and core services.
 
 ## Prerequisites
 
 - Docker Desktop (or Docker Engine) with Docker Compose v2 (`docker compose`)
 - ~4–8 GB free RAM and adequate disk space for images
+- Python 3.11+ with Poetry
 - Git checked out to the repository root
 
-## Quickstart
+## Quickstart (Recommended)
 
-From the repository root:
+Use the convenience scripts from the repository root:
 
-1) Start the MQTT broker
+```bash
+# Start all services (downloads AI models on first run)
+./scripts/dev-start.sh
+
+# Start with UI
+./scripts/dev-start.sh --ui
+
+# Check status of all services
+./scripts/dev-status.sh
+
+# Restart all services
+./scripts/dev-restart.sh
+
+# Restart specific service with rebuild
+./scripts/dev-restart.sh --service ai-service --rebuild
+
+# Stop everything
+./scripts/dev-stop.sh
+
+# Stop and remove volumes (WARNING: deletes data)
+./scripts/dev-stop.sh --volumes
+```
+
+## Manual Setup
+
+If you prefer manual control:
+
+### 1. Start the MQTT broker
 
 ```bash
 docker compose -f docker/compose/dev.yml up -d mqtt
 ```
 
-2) Build and start the core services
+### 2. Build and start the core services
 
 ```bash
-docker compose -f docker/compose/dev.yml up -d --build core-daemon module-manager comms-bridge ai-service
+docker compose -f docker/compose/dev.yml up -d --build
 ```
 
-3) Verify health endpoints
+### 3. Verify health endpoints
 
 ```bash
-curl http://localhost:8000/health   # core-daemon
-curl http://localhost:8001/health   # module-manager
-curl http://localhost:8003/health   # comms-bridge
-curl http://localhost:8010/health   # ai-service (if enabled)
+curl http://localhost:8000/health   # comms-bridge
+curl http://localhost:8001/health   # sensor-hub
+curl http://localhost:8002/health   # data-logger
+curl http://localhost:8010/health   # ai-service
 ```
 
-## What’s running
+## What's Running
 
-- `mqtt` (Eclipse Mosquitto) on port `1883`, configured by `docker/mosquitto.conf`
-- `core-daemon` (port `8000`)
-- `module-manager` (port `8001`)
-- `comms-bridge` (port `8003`)
-- `ai-service` (port `8010`)
+| Service       | Port | Description                        |
+| ------------- | ---- | ---------------------------------- |
+| mqtt          | 1883 | Eclipse Mosquitto message broker   |
+| comms-bridge  | 8000 | Mesh networking and radio control  |
+| sensor-hub    | 8001 | Sensor registry and readings       |
+| data-logger   | 8002 | Persistence (notes, preferences)   |
+| ai-service    | 8010 | AI inference (chat, classification)|
+| db-viewer     | 8080 | Datasette database viewer          |
 
-The Compose file mounts:
-- `docker/mosquitto.conf` into the Mosquitto container (read-only)
-- The repository root at `/workspace` in the MQTT container (read-only)
+## Database Viewer
 
-## Common workflows
+In development mode, you can browse all databases at:
 
-- View logs for a specific service:
+- **http://localhost:8080/general** - Preferences, notes, sensors
+- **http://localhost:8080/mesh** - Mesh contacts and messages
+- **http://localhost:8080/ai** - AI conversations, messages, models
+
+## Common Workflows
+
+### View logs for a specific service
 
 ```bash
-docker compose -f docker/compose/dev.yml logs -f core-daemon
+docker compose -f docker/compose/dev.yml logs -f ai-service
 ```
 
-- Rebuild and restart a service:
+### Rebuild and restart a service
 
 ```bash
-docker compose -f docker/compose/dev.yml build core-daemon
-docker compose -f docker/compose/dev.yml up -d core-daemon
+docker compose -f docker/compose/dev.yml up -d --build --force-recreate ai-service
 ```
 
-- Clean rebuild (no cache) of all services:
+Or use the convenience script:
+
+```bash
+./scripts/dev-restart.sh --service ai-service --rebuild
+```
+
+### Clean rebuild (no cache) of all services
 
 ```bash
 docker compose -f docker/compose/dev.yml build --no-cache
 docker compose -f docker/compose/dev.yml up -d
 ```
 
-- Stop everything:
+### Stop everything
 
 ```bash
 docker compose -f docker/compose/dev.yml down
 ```
 
-- Stop and remove containers, networks, and named volumes created by this file:
+Or:
+
+```bash
+./scripts/dev-stop.sh
+```
+
+### Stop and remove volumes
 
 ```bash
 docker compose -f docker/compose/dev.yml down -v
 ```
 
-## Configuration notes
+Or:
 
-- Each service sets a default config file path via environment variables in the Compose file:
-  - `CORE_DAEMON_CONFIG`, `MODULE_MANAGER_CONFIG`, `COMMS_BRIDGE_CONFIG`, `AI_SERVICE_CONFIG`
-- Prefer environment variables for secrets; keep them out of the repo.
-- Internal message schemas live under `device/libs/schemas/` and are used across services.
+```bash
+./scripts/dev-stop.sh --volumes
+```
+
+## AI Model Management
+
+AI models are stored in a Docker volume and need to be downloaded on first run.
+
+### Automatic Download
+
+The `dev-start.sh` script automatically downloads models if not present.
+
+### Manual Download
+
+```bash
+./scripts/download-models.sh --all
+```
+
+### Upload Custom Models
+
+```bash
+./scripts/upload-model.sh path/to/model.gguf --id my-model --type language
+```
+
+See `docs/models/README.md` for detailed model management.
+
+## Running the UI
+
+The Qt/QML frontend runs outside Docker:
+
+```bash
+cd device/apps/ui
+poetry run python main.py
+```
+
+Or use:
+
+```bash
+./scripts/dev-start.sh --ui
+```
+
+## Configuration Notes
+
+- Each service uses environment variables configured in the Compose file
+- Service configs: `CORE_DAEMON_CONFIG`, `AI_SERVICE_CONFIG`, etc.
+- Prefer environment variables for secrets; keep them out of the repo
+- Internal message schemas: `device/libs/schemas/`
 
 ## Troubleshooting
 
-- Port in use:
-  - Another process may be bound to `1883`, `8000`, `8001`, `8003`, or `8010`. Stop conflicting processes or change host ports in `docker/compose/dev.yml`.
-- Mosquitto config mount errors:
-  - Ensure `docker/mosquitto.conf` exists and is readable. The mount is read-only by design.
-- Rebuild not picking up code changes:
-  - Use `--no-cache` during `docker compose build`, or bump the Dockerfile build context where necessary.
+### Port in use
 
-## Next steps
+Another process may be bound to ports. Stop conflicting processes or change
+host ports in `docker/compose/dev.yml`.
 
-- Explore service READMEs under `device/services/*/README.md` for responsibilities and APIs.
-- See the top-level `README.md` for test and lint commands using Poetry.
+Common ports: `1883` (MQTT), `8000-8002`, `8010`, `8080`
+
+### Container not picking up code changes
+
+```bash
+docker compose -f docker/compose/dev.yml build --no-cache ai-service
+docker compose -f docker/compose/dev.yml up -d --force-recreate ai-service
+```
+
+### Database tables missing
+
+Restart the db-viewer to pick up schema changes:
+
+```bash
+docker compose -f docker/compose/dev.yml restart db-viewer
+```
+
+### AI service not responding
+
+Check if models are downloaded:
+
+```bash
+./scripts/dev-status.sh
+```
+
+Download if missing:
+
+```bash
+./scripts/download-models.sh --all
+```
+
+## Next Steps
+
+- Explore service READMEs under `device/services/*/README.md`
+- See `docs/models/README.md` for AI model management
+- See `docs/database-schema.md` for database structure
+- See the top-level `README.md` for test and lint commands

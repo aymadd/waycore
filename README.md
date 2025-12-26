@@ -44,6 +44,7 @@ when the UI is busy or rebooting.
 | [Architecture](docs/architecture/architecture.md)         | Detailed software architecture, services, APIs, and standards |
 | [API Reference](docs/api/)                                | Auto-generated OpenAPI specifications for all services        |
 | [Database Schema](docs/database-schema.md)                | Database structure, tables, and data models                   |
+| [AI Model Guide](docs/models/README.md)                   | Model management, uploads, and supported formats              |
 | [Progress](progress/SUMMARY.md)                           | Current implementation status and task tracking               |
 | [Local Development](docs/local_dev_docker.md)             | Docker-based development setup and workflows                  |
 | [IPC Guide](local_plan/12-ipc-implementation-guide.md.md) | Inter-process communication strategy                          |
@@ -56,18 +57,38 @@ when the UI is busy or rebooting.
 - Python 3.11+
 - Poetry
 
-### Run Services
+### Development Scripts (Recommended)
+
+```bash
+# Start everything (downloads models on first run)
+./scripts/dev-start.sh
+
+# Start with UI
+./scripts/dev-start.sh --ui
+
+# Check status
+./scripts/dev-status.sh
+
+# Restart services
+./scripts/dev-restart.sh
+
+# Restart specific service with rebuild
+./scripts/dev-restart.sh --service ai-service --rebuild
+
+# Stop everything
+./scripts/dev-stop.sh
+```
+
+### Manual Setup
 
 ```bash
 # Start infrastructure and services
-docker-compose -f docker/compose/dev.yml up -d mqtt
-docker-compose -f docker/compose/dev.yml up -d --build core-daemon module-manager comms-bridge ai-service data-logger
+docker compose -f docker/compose/dev.yml up -d
 
 # Verify services are running
-curl http://localhost:8000/health   # core-daemon
-curl http://localhost:8001/health   # module-manager
+curl http://localhost:8000/health   # comms-bridge
+curl http://localhost:8001/health   # sensor-hub
 curl http://localhost:8002/health   # data-logger
-curl http://localhost:8003/health   # comms-bridge
 curl http://localhost:8010/health   # ai-service
 ```
 
@@ -138,6 +159,42 @@ Run the UI locally:
 ```bash
 cd device/apps/ui && python main.py
 ```
+
+## AI Model Management
+
+Waycore runs AI models locally on-device for offline-first operation. Due to
+hardware constraints (Raspberry Pi 5 with 4GB RAM), only **one model per
+category** (language, vision) can be active at a time.
+
+### Default Models
+
+| Model         | Type     | Size   | Description                            |
+| ------------- | -------- | ------ | -------------------------------------- |
+| Phi-3 Mini 4K | Language | 2.3 GB | Chat/Q&A (GGUF, 4-bit quantized)       |
+| MobileNetV3   | Vision   | 5 MB   | Image classification (TensorFlow Lite) |
+
+### Uploading Custom Models
+
+Upload models via the API or convenience script:
+
+```bash
+# Via script
+./scripts/upload-model.sh path/to/model.gguf --id my-model --type language
+
+# Via API
+curl -X POST http://localhost:8010/api/models/upload \
+  -F "file=@model.gguf" \
+  -F "id=my-model" \
+  -F "type=language"
+```
+
+### Supported Formats
+
+- **Language models**: GGUF (llama.cpp compatible) — Phi-3, TinyLlama, etc.
+- **Vision models**: TensorFlow Lite (.tflite) — MobileNet, EfficientNet, etc.
+
+For detailed instructions, model download links, and troubleshooting, see the
+[Model Management Guide](docs/models/README.md).
 
 ## Contributing
 

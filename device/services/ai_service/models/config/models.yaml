@@ -1,13 +1,64 @@
+# AI Model Configuration
+# See docs/models/README.md for model management guide
+
+# Default active models (one per category)
+defaults:
+  language: phi3-mini
+  vision: mobilenetv3
+
+# Model definitions
 models:
+  # Language Models (GGUF format for llama.cpp)
+  phi3-mini:
+    type: language
+    name: "Phi-3 Mini 4K"
+    description: "Microsoft Phi-3 Mini with 4K context, 4-bit quantized"
+    runner: phi3-mini
+    path: language/phi-3-mini-4k-instruct.Q4_K_M.gguf
+    format: gguf
+    size_mb: 2300
+    context_length: 4096
+    threads: 4
+    download_url: "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf"
+
+  tinyllama:
+    type: language
+    name: "TinyLlama 1.1B"
+    description: "Smaller, faster model for basic Q&A"
+    runner: phi3-mini  # Same runner, different model file
+    path: language/tinyllama-1.1b.Q4_K_M.gguf
+    format: gguf
+    size_mb: 800
+    context_length: 2048
+    threads: 4
+    download_url: "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
+
+  # Vision Models (TensorFlow Lite format)
   mobilenetv3:
     type: vision
+    name: "MobileNetV3 Small"
+    description: "Fast image classification for general objects"
     runner: mobilenetv3
-    path: null
-  phi3-mini:
-    type: llm
-    runner: phi3-mini
-    path: null
+    path: vision/mobilenet_v3_small.tflite
+    labels: labels/imagenet_labels.txt
+    format: tflite
+    size_mb: 5
+    input_size: [224, 224]
+    download_url: "https://storage.googleapis.com/tfhub-lite-models/google/lite-model/imagenet/mobilenet_v3_small_100_224/classification/5/default/1.tflite"
+
+  # Pipeline Models
   vision-llm:
     type: pipeline
+    name: "Vision + LLM Pipeline"
+    description: "Two-stage: image classification -> LLM description"
     runner: vision-llm
-    path: null
+    requires:
+      - mobilenetv3
+      - phi3-mini
+
+# Hardware limits (Raspberry Pi 5, 4GB RAM)
+limits:
+  max_active_language: 1
+  max_active_vision: 1
+  max_memory_mb: 3500
+  warn_memory_mb: 2500

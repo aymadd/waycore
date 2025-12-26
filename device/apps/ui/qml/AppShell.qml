@@ -102,6 +102,29 @@ Item {
 		id: photoViewerComponent
 		App.PhotoViewer {}
 	}
+
+	Component {
+		id: aiChatComponent
+		App.AIChat {}
+	}
+
+	Component {
+		id: aiConversationListComponent
+		App.AIConversationList {
+			onConversationSelected: function(conversationId) {
+				if (AIBridge) {
+					AIBridge.loadConversation(conversationId)
+				}
+				router.pop()
+			}
+			onNewChatRequested: {
+				if (AIBridge) {
+					AIBridge.newConversation()
+				}
+				router.pop()
+			}
+		}
+	}
 }
 
 	function navigateTo(appName) {
@@ -139,6 +162,12 @@ Item {
 			break
 		case "Gallery":
 			router.push(galleryComponent)
+			break
+		case "AI":
+			router.push(aiChatComponent)
+			break
+		case "AIHistory":
+			router.push(aiConversationListComponent)
 			break
 		default:
 			console.log("App not yet implemented:", appName)

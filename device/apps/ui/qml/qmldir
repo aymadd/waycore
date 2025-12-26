@@ -19,3 +19,5 @@ MeshNodeDetails 1.0 MeshNodeDetails.qml
 Camera 1.0 Camera.qml
 Gallery 1.0 Gallery.qml
 PhotoViewer 1.0 PhotoViewer.qml
+AIChat 1.0 AIChat.qml
+AIConversationList 1.0 AIConversationList.qml
