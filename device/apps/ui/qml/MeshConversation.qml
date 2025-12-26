@@ -4,58 +4,82 @@ import QtQuick.Layouts 1.15
 import "." as App
 import "components" as UI
 
+/**
+ * Direct Message Conversation with a specific node.
+ *
+ * Properties:
+ *   - node_id: The node ID to have a conversation with
+ */
 Rectangle {
-    id: meshChat
+    id: meshConversation
     color: App.Theme.background
+
+    // Node we're chatting with
+    property string node_id: ""
+    property string node_name: ""
+    property string node_alias: ""
+    property bool is_favorite: false
+    property bool is_online: false
 
     // Chat state
     property var messages: []
-    property var nodes: []
-    property bool isConnected: false
-    property string channelName: "LongFast"
-    property int onlineNodeCount: 0
 
     Component.onCompleted: {
+        loadNodeInfo()
         refreshMessages()
-        refreshStatus()
     }
 
-    function refreshMessages() {
-        console.log("MeshChat: refreshMessages called, MeshBridge =", MeshBridge)
-        if (MeshBridge) {
-            var result = MeshBridge.getMessages(50)
-            console.log("MeshChat: getMessages result =", JSON.stringify(result))
-            if (result && result.messages) {
-                messages = result.messages
-                console.log("MeshChat: loaded", messages.length, "messages")
+    function loadNodeInfo() {
+        console.log("MeshConversation: loading info for node", node_id)
+
+        if (MeshBridge && node_id) {
+            // Get node info from nodes list
+            var nodesResult = MeshBridge.getNodesWithContacts()
+            if (nodesResult && nodesResult.nodes) {
+                for (var i = 0; i < nodesResult.nodes.length; i++) {
+                    if (nodesResult.nodes[i].node_id === node_id) {
+                        var node = nodesResult.nodes[i]
+                        node_name = node.short_name || node.node_id
+                        node_alias = node.alias || ""
+                        is_favorite = node.is_favorite || false
+                        is_online = node.status === "online"
+                        break
+                    }
+                }
             }
-        } else {
-            console.log("MeshChat: MeshBridge not available, using inline mock")
-            // Mock data for development
-            messages = [
-                { id: "1", from_node: "!a1b2c3d4", from_name: "ALPH", text: "Hello from Alpha!", timestamp: new Date().toISOString(), is_mine: false },
-                { id: "2", from_node: "!00000001", from_name: "WAYC", text: "Hello Alpha!", timestamp: new Date().toISOString(), is_mine: true },
-                { id: "3", from_node: "!b2c3d4e5", from_name: "BRVO", text: "Bravo checking in", timestamp: new Date().toISOString(), is_mine: false },
-            ]
-        }
-    }
 
-    function refreshStatus() {
-        console.log("MeshChat: refreshStatus called")
-        if (MeshBridge) {
-            var status = MeshBridge.getStatus()
-            console.log("MeshChat: getStatus result =", JSON.stringify(status))
-            if (status) {
-                isConnected = status.connected !== undefined ? status.connected : true
-                channelName = status.channel_name || "LongFast"
-                onlineNodeCount = status.nodes ? status.nodes.online : 0
-                console.log("MeshChat: status updated - connected:", isConnected, "channel:", channelName, "nodes:", onlineNodeCount)
+            // Get contact info
+            var contactResult = MeshBridge.getContact(node_id)
+            if (contactResult && contactResult.contact) {
+                node_alias = contactResult.contact.alias || ""
+                is_favorite = contactResult.contact.is_favorite || false
             }
         } else {
             // Mock
-            isConnected = true
-            channelName = "LongFast"
-            onlineNodeCount = 4
+            node_name = "ALPH"
+            node_alias = "Alpha Team"
+            is_favorite = true
+            is_online = true
+        }
+    }
+
+    function refreshMessages() {
+        console.log("MeshConversation: refreshMessages for", node_id)
+
+        if (MeshBridge && node_id) {
+            var result = MeshBridge.getConversation(node_id, 100)
+            console.log("MeshConversation: getConversation result =", JSON.stringify(result))
+            if (result && result.messages) {
+                messages = result.messages
+                console.log("MeshConversation: loaded", messages.length, "messages")
+            }
+        } else {
+            // Mock DM messages
+            messages = [
+                { id: "dm_1", from_node: node_id, text: "Hey, are you at the rally point?", timestamp: new Date(Date.now() - 60000).toISOString(), is_mine: false },
+                { id: "dm_2", from_node: "!00000001", text: "Almost there, ETA 5 minutes", timestamp: new Date(Date.now() - 30000).toISOString(), is_mine: true },
+                { id: "dm_3", from_node: node_id, text: "Copy that. See you soon.", timestamp: new Date().toISOString(), is_mine: false }
+            ]
         }
     }
 
@@ -67,7 +91,7 @@ Rectangle {
         sendButton.enabled = false
 
         if (MeshBridge) {
-            var result = MeshBridge.sendMessage(text)
+            var result = MeshBridge.sendDirectMessage(text, node_id)
             if (result && result.success) {
                 messageInput.text = ""
                 refreshMessages()
@@ -75,9 +99,9 @@ Rectangle {
         } else {
             // Mock: add to local list
             var newMsg = {
-                id: "mock_" + Date.now(),
+                id: "dm_" + Date.now(),
                 from_node: "!00000001",
-                from_name: "WAYC",
+                to_node: node_id,
                 text: text,
                 timestamp: new Date().toISOString(),
                 is_mine: true
@@ -94,15 +118,23 @@ Rectangle {
         messageList.positionViewAtEnd()
     }
 
+    function toggleFavorite() {
+        if (MeshBridge) {
+            var result = MeshBridge.toggleFavorite(node_id)
+            if (result) {
+                is_favorite = result.is_favorite || !is_favorite
+            }
+        } else {
+            is_favorite = !is_favorite
+        }
+    }
+
     // Refresh timer
     Timer {
         interval: 5000
         running: true
         repeat: true
-        onTriggered: {
-            refreshMessages()
-            refreshStatus()
-        }
+        onTriggered: refreshMessages()
     }
 
     ColumnLayout {
@@ -124,7 +156,7 @@ Rectangle {
                     text: "←"
                     font.pixelSize: 20
                     onClicked: {
-                        var shell = meshChat.parent
+                        var shell = meshConversation.parent
                         while (shell && !shell.hasOwnProperty("navigateBack")) {
                             shell = shell.parent
                         }
@@ -139,31 +171,56 @@ Rectangle {
                     spacing: 2
 
                     Text {
-                        text: "📡 " + channelName
+                        text: (node_alias || node_name || node_id)
                         color: App.Theme.textPrimary
                         font.pixelSize: App.Theme.h2Size
                         font.bold: true
                     }
 
-                    Text {
-                        text: isConnected
-                            ? "🟢 " + onlineNodeCount + " nodes online"
-                            : "🔴 Disconnected"
-                        color: isConnected ? App.Theme.success : App.Theme.error
-                        font.pixelSize: App.Theme.captionSize
+                    RowLayout {
+                        spacing: 4
+
+                        // Online status indicator
+                        Rectangle {
+                            width: 8
+                            height: 8
+                            radius: 4
+                            color: is_online ? App.Theme.success : App.Theme.textSecondary
+                        }
+
+                        Text {
+                            text: is_online ? "Online" : "Offline"
+                            color: App.Theme.textSecondary
+                            font.pixelSize: App.Theme.captionSize
+                        }
+
+                        Text {
+                            visible: node_alias && node_name
+                            text: " · " + node_name
+                            color: App.Theme.textSecondary
+                            font.pixelSize: App.Theme.captionSize
+                        }
                     }
                 }
 
+                // Favorite button
                 Button {
-                    text: "👥"
+                    text: is_favorite ? "★" : "☆"
                     font.pixelSize: 20
+                    onClicked: toggleFavorite()
+                }
+
+                // Info button - navigate to node details
+                Button {
+                    text: "ⓘ"
+                    font.pixelSize: 18
                     onClicked: {
-                        var shell = meshChat.parent
+                        var shell = meshConversation.parent
                         while (shell && !shell.hasOwnProperty("navigateTo")) {
                             shell = shell.parent
                         }
                         if (shell && shell.navigateTo) {
-                            shell.navigateTo("MeshNodes")
+                            shell.navigateTo("MeshNodeDetails", { node_id: node_id })
                         }
                     }
                 }
@@ -175,6 +232,20 @@ Rectangle {
             Layout.fillWidth: true
             height: 1
             color: App.Theme.divider
+        }
+
+        // Encryption badge
+        Rectangle {
+            Layout.fillWidth: true
+            height: 28
+            color: Qt.rgba(App.Theme.primary.r, App.Theme.primary.g, App.Theme.primary.b, 0.1)
+
+            Text {
+                anchors.centerIn: parent
+                text: "🔒 Direct messages are encrypted point-to-point"
+                color: App.Theme.primary
+                font.pixelSize: App.Theme.captionSize
+            }
         }
 
         // Message list
@@ -209,30 +280,6 @@ Rectangle {
                         anchors.fill: parent
                         anchors.margins: 8
                         spacing: 4
-
-                        // Sender name (for received messages) - tap to open DM
-                        Text {
-                            visible: !isMine
-                            text: modelData.from_name || modelData.from_node
-                            color: App.Theme.accent
-                            font.pixelSize: App.Theme.captionSize
-                            font.bold: true
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    // Open DM with this sender
-                                    var shell = meshChat.parent
-                                    while (shell && !shell.hasOwnProperty("openConversation")) {
-                                        shell = shell.parent
-                                    }
-                                    if (shell && shell.openConversation) {
-                                        shell.openConversation(modelData.from_node)
-                                    }
-                                }
-                            }
-                        }
 
                         // Message text
                         Text {
@@ -270,7 +317,7 @@ Rectangle {
             Text {
                 visible: messages.length === 0
                 anchors.centerIn: parent
-                text: "No messages yet\n\nSend a message to start!"
+                text: "No messages yet\n\nStart a private conversation!"
                 color: App.Theme.textSecondary
                 font.pixelSize: App.Theme.bodySize
                 horizontalAlignment: Text.AlignHCenter
@@ -289,16 +336,16 @@ Rectangle {
             color: App.Theme.divider
         }
 
-        // Warning banner when no nodes online
+        // Offline warning
         Rectangle {
             Layout.fillWidth: true
-            height: onlineNodeCount === 0 ? 32 : 0
-            visible: onlineNodeCount === 0
+            height: !is_online ? 32 : 0
+            visible: !is_online
             color: App.Theme.warning
 
             Text {
                 anchors.centerIn: parent
-                text: "⚠️ No nodes online - messages will broadcast when nodes connect"
+                text: "⚠️ Node is offline - message will be delivered when online"
                 color: "#000000"
                 font.pixelSize: App.Theme.captionSize
             }
@@ -320,9 +367,7 @@ Rectangle {
                 TextField {
                     id: messageInput
                     Layout.fillWidth: true
-                    placeholderText: onlineNodeCount === 0
-                        ? "Broadcast message..."
-                        : "Type a message..."
+                    placeholderText: "Message " + (node_alias || node_name || "...")
                     font.pixelSize: App.Theme.bodySize
 
                     Keys.onReturnPressed: {

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from device.drivers.mock.mesh_network import MockMeshNetwork
 from device.libs.hil.interfaces.mesh_network import IMeshNetwork
 from device.libs.schemas.meshtastic import (
+    DeliveryStatus,
     MeshMessage,
     MeshMessageCreate,
     MeshNode,
@@ -105,7 +106,7 @@ class MeshChatService:
             want_ack=message.want_ack,
         )
 
-        # Create message record
+        # Create message record with initial "sending" status
         sent_message = MeshMessage(
             id=msg_id,
             from_node=self._driver.get_my_node_id(),
@@ -114,7 +115,8 @@ class MeshChatService:
             text=message.text,
             timestamp=datetime.now(timezone.utc),
             want_ack=message.want_ack,
-            acknowledged=False,  # Will be updated later
+            acknowledged=False,
+            delivery_status=DeliveryStatus.SENDING,
         )
 
         self._message_history.append(sent_message)
@@ -124,7 +126,79 @@ class MeshChatService:
             self._persist_message(sent_message)
 
         logger.debug(f"Sent message {msg_id} to {message.to_node or 'broadcast'}")
+
+        # Schedule ACK simulation (mock mode)
+        if message.want_ack:
+            self._schedule_ack_simulation(msg_id)
+
         return sent_message
+
+    def _schedule_ack_simulation(self, message_id: str) -> None:
+        """Schedule a simulated ACK after a delay (mock mode only)."""
+
+        async def _simulate_ack() -> None:
+            import random
+
+            # Simulate network delay (1-3 seconds)
+            await asyncio.sleep(random.uniform(1.0, 3.0))
+
+            # 90% success rate
+            success = random.random() < 0.9
+
+            new_status = DeliveryStatus.DELIVERED if success else DeliveryStatus.FAILED
+            await self.update_message_status(message_id, new_status, acknowledged=success)
+            logger.debug(f"ACK for {message_id}: {new_status.value}")
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.create_task(_simulate_ack())
+        except RuntimeError:
+            # No event loop
+            pass
+
+    async def update_message_status(
+        self,
+        message_id: str,
+        status: DeliveryStatus,
+        acknowledged: bool = False,
+    ) -> bool:
+        """Update delivery status for a message."""
+        # Update in-memory
+        for i, msg in enumerate(self._message_history):
+            if msg.id == message_id:
+                # Create updated message (MeshMessage is frozen)
+                updated = MeshMessage(
+                    id=msg.id,
+                    from_node=msg.from_node,
+                    to_node=msg.to_node,
+                    channel=msg.channel,
+                    message_type=msg.message_type,
+                    text=msg.text,
+                    timestamp=msg.timestamp,
+                    rx_time=msg.rx_time,
+                    hop_count=msg.hop_count,
+                    hop_limit=msg.hop_limit,
+                    want_ack=msg.want_ack,
+                    acknowledged=acknowledged,
+                    delivery_status=status,
+                    snr=msg.snr,
+                    rssi=msg.rssi,
+                )
+                self._message_history[i] = updated
+                break
+
+        # Update in database
+        if self._db:
+            await self._db.update_delivery_status(message_id, status.value)
+            if acknowledged:
+                await self._db.execute(
+                    "UPDATE mesh_messages SET acknowledged = 1 WHERE message_id = ?",
+                    (message_id,),
+                )
+                await self._db.commit()
+
+        return True
 
     def get_messages(
         self,
@@ -268,6 +342,13 @@ class MeshChatService:
     def _row_to_message(self, row: dict[str, Any]) -> MeshMessage | None:
         """Convert a database row to a MeshMessage."""
         try:
+            # Parse delivery status from database
+            status_str = row.get("delivery_status", "sent")
+            try:
+                delivery_status = DeliveryStatus(status_str)
+            except ValueError:
+                delivery_status = DeliveryStatus.SENT
+
             return MeshMessage(
                 id=str(row.get("message_id") or row.get("id", "")),
                 from_node=row.get("from_node", ""),
@@ -281,6 +362,7 @@ class MeshChatService:
                 snr=row.get("snr"),
                 hop_count=row.get("hop_count") or 0,
                 acknowledged=bool(row.get("acknowledged")),
+                delivery_status=delivery_status,
             )
         except Exception as e:
             logger.warning(f"Failed to parse message row: {e}")

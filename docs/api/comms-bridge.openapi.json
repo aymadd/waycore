@@ -1,0 +1,927 @@
+{
+  "components": {
+    "schemas": {
+      "ContactUpdate": {
+        "description": "Request body for updating contact info.",
+        "properties": {
+          "alias": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alias"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "title": "ContactUpdate",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "MeshMessageCreate": {
+        "description": "Schema for creating a new mesh message.",
+        "properties": {
+          "channel": {
+            "default": 0,
+            "description": "Channel index",
+            "maximum": 7.0,
+            "minimum": 0.0,
+            "title": "Channel",
+            "type": "integer"
+          },
+          "text": {
+            "description": "Message text",
+            "maxLength": 237,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "to_node": {
+            "anyOf": [
+              {
+                "pattern": "^![0-9a-fA-F]{8}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recipient node ID (None = broadcast)",
+            "title": "To Node"
+          },
+          "want_ack": {
+            "default": true,
+            "description": "Request delivery acknowledgment",
+            "title": "Want Ack",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "MeshMessageCreate",
+        "type": "object"
+      },
+      "Priority": {
+        "enum": [
+          "low",
+          "normal",
+          "high",
+          "urgent"
+        ],
+        "title": "Priority",
+        "type": "string"
+      },
+      "SendMessageRequest": {
+        "description": "Request to send a message via a radio.\nTopic: comms/message/send",
+        "properties": {
+          "channel": {
+            "default": "primary",
+            "description": "Channel name",
+            "minLength": 1,
+            "title": "Channel",
+            "type": "string"
+          },
+          "content": {
+            "description": "Message text",
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "msg_id": {
+            "description": "Unique message identifier (UUID4)",
+            "format": "uuid",
+            "title": "Msg Id",
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority",
+            "default": "normal",
+            "description": "Message priority"
+          },
+          "source": {
+            "description": "Service name that created the message",
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "Creation timestamp in UTC",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "to_node": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recipient (None=broadcast)",
+            "title": "To Node"
+          },
+          "transport": {
+            "$ref": "#/components/schemas/Transport",
+            "description": "Transport type"
+          },
+          "version": {
+            "default": "1.0.0",
+            "description": "Schema version (semver)",
+            "title": "Version",
+            "type": "string"
+          },
+          "want_ack": {
+            "default": false,
+            "description": "Request acknowledgment",
+            "title": "Want Ack",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source",
+          "transport",
+          "content"
+        ],
+        "title": "SendMessageRequest",
+        "type": "object"
+      },
+      "Transport": {
+        "enum": [
+          "lora",
+          "wifi",
+          "lte",
+          "bluetooth"
+        ],
+        "title": "Transport",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "API specification for the Waycore comms-bridge service.",
+    "title": "Comms Bridge API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/factory-reset": {
+      "post": {
+        "description": "Clear all mesh data (contacts and messages).",
+        "operationId": "factory_reset_api_factory_reset_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Factory Reset Api Factory Reset Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Factory Reset"
+      }
+    },
+    "/api/mesh/contacts": {
+      "get": {
+        "description": "Get all mesh contacts.",
+        "operationId": "get_contacts_api_mesh_contacts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Contacts Api Mesh Contacts Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Contacts"
+      }
+    },
+    "/api/mesh/contacts/favorites": {
+      "get": {
+        "description": "Get favorite contacts only.",
+        "operationId": "get_favorites_api_mesh_contacts_favorites_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Favorites Api Mesh Contacts Favorites Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Favorites"
+      }
+    },
+    "/api/mesh/contacts/{node_id}": {
+      "delete": {
+        "description": "Delete a contact.",
+        "operationId": "delete_contact_api_mesh_contacts__node_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Contact Api Mesh Contacts  Node Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Contact"
+      },
+      "get": {
+        "description": "Get contact info for a node.",
+        "operationId": "get_contact_api_mesh_contacts__node_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Contact Api Mesh Contacts  Node Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Contact"
+      },
+      "put": {
+        "description": "Update contact alias or notes.",
+        "operationId": "update_contact_api_mesh_contacts__node_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Contact Api Mesh Contacts  Node Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Contact"
+      }
+    },
+    "/api/mesh/contacts/{node_id}/favorite": {
+      "post": {
+        "description": "Toggle favorite status for a node.",
+        "operationId": "toggle_favorite_api_mesh_contacts__node_id__favorite_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Toggle Favorite Api Mesh Contacts  Node Id  Favorite Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Toggle Favorite"
+      }
+    },
+    "/api/mesh/conversation/{node_id}": {
+      "get": {
+        "description": "Get conversation with a specific node.",
+        "operationId": "mesh_conversation_api_mesh_conversation__node_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mesh Conversation Api Mesh Conversation  Node Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mesh Conversation"
+      }
+    },
+    "/api/mesh/messages": {
+      "get": {
+        "description": "Get mesh message history.",
+        "operationId": "mesh_messages_api_mesh_messages_get",
+        "parameters": [
+          {
+            "description": "Max messages to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "description": "Max messages to return",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "ISO timestamp to filter from",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO timestamp to filter from",
+              "title": "Since"
+            }
+          },
+          {
+            "description": "Filter by node ID",
+            "in": "query",
+            "name": "node_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by node ID",
+              "title": "Node Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mesh Messages Api Mesh Messages Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mesh Messages"
+      },
+      "post": {
+        "description": "Send a mesh message.",
+        "operationId": "send_mesh_message_api_mesh_messages_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeshMessageCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Send Mesh Message Api Mesh Messages Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send Mesh Message"
+      }
+    },
+    "/api/mesh/messages/{message_id}": {
+      "get": {
+        "description": "Get a specific message.",
+        "operationId": "mesh_message_api_mesh_messages__message_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mesh Message Api Mesh Messages  Message Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mesh Message"
+      }
+    },
+    "/api/mesh/nodes": {
+      "get": {
+        "description": "Get list of mesh nodes.",
+        "operationId": "mesh_nodes_api_mesh_nodes_get",
+        "parameters": [
+          {
+            "description": "Only return online nodes",
+            "in": "query",
+            "name": "online_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Only return online nodes",
+              "title": "Online Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mesh Nodes Api Mesh Nodes Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mesh Nodes"
+      }
+    },
+    "/api/mesh/nodes/enriched": {
+      "get": {
+        "description": "Get nodes with contact info merged.",
+        "operationId": "get_nodes_with_contacts_api_mesh_nodes_enriched_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "online_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Online Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Nodes With Contacts Api Mesh Nodes Enriched Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Nodes With Contacts"
+      }
+    },
+    "/api/mesh/nodes/{node_id}": {
+      "get": {
+        "description": "Get a specific mesh node.",
+        "operationId": "mesh_node_api_mesh_nodes__node_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mesh Node Api Mesh Nodes  Node Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mesh Node"
+      }
+    },
+    "/api/mesh/status": {
+      "get": {
+        "description": "Get mesh network status.",
+        "operationId": "mesh_status_api_mesh_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mesh Status Api Mesh Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mesh Status"
+      }
+    },
+    "/api/radios": {
+      "get": {
+        "operationId": "radios_api_radios_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Radios Api Radios Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Radios"
+      }
+    },
+    "/api/send": {
+      "post": {
+        "operationId": "send_api_send_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Send Api Send Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send"
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Health Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Local development",
+      "url": "http://localhost:8003"
+    },
+    {
+      "description": "Docker network",
+      "url": "http://comms-bridge:8003"
+    }
+  ]
+}

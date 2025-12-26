@@ -173,6 +173,7 @@ class MeshBridge(QObject):
                 "text": "Hello from Alpha!",
                 "timestamp": "2025-12-25T11:50:00Z",
                 "is_mine": False,
+                "delivery_status": "delivered",
             },
             {
                 "id": "msg_2",
@@ -181,6 +182,7 @@ class MeshBridge(QObject):
                 "text": "Hey Alpha, good to hear from you!",
                 "timestamp": "2025-12-25T11:51:00Z",
                 "is_mine": True,
+                "delivery_status": "delivered",
             },
             {
                 "id": "msg_3",
@@ -189,6 +191,7 @@ class MeshBridge(QObject):
                 "text": "Bravo checking in. All good here.",
                 "timestamp": "2025-12-25T11:55:00Z",
                 "is_mine": False,
+                "delivery_status": "delivered",
             },
         ]
 
@@ -199,7 +202,7 @@ class MeshBridge(QObject):
             return {"success": False, "error": "Empty message"}
 
         if not self._backend_available or not self._client:
-            # Mock success - add message to local list
+            # Mock success - add message with sending -> delivered status
             from datetime import datetime, timezone
 
             new_msg = {
@@ -209,9 +212,14 @@ class MeshBridge(QObject):
                 "text": text,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "is_mine": True,
+                "delivery_status": "sending",
             }
             self._messages.append(new_msg)
             self.messagesChanged.emit()
+
+            # Simulate delivery after delay
+            self._simulate_delivery(new_msg["id"])
+
             return {"success": True, "mock": True, "message": new_msg}
 
         try:
@@ -222,6 +230,28 @@ class MeshBridge(QObject):
             logger.error(f"Failed to send message: {e}")
             return {"success": False, "error": str(e)}
 
+    def _simulate_delivery(self, message_id: str) -> None:
+        """Simulate message delivery after a delay (mock mode)."""
+        import random
+
+        from PySide6.QtCore import QTimer
+
+        def _update_status() -> None:
+            # 90% success rate
+            success = random.random() < 0.9
+            new_status = "delivered" if success else "failed"
+
+            for msg in self._messages:
+                if msg.get("id") == message_id:
+                    msg["delivery_status"] = new_status
+                    break
+
+            self.messagesChanged.emit()
+
+        # Delay 1-3 seconds
+        delay = int(random.uniform(1000, 3000))
+        QTimer.singleShot(delay, _update_status)
+
     @Slot(str, str, result="QVariant")  # type: ignore[arg-type]
     def sendDirectMessage(self, text: str, to_node: str) -> dict[str, Any]:
         """Send a direct message to a specific node."""
@@ -229,7 +259,7 @@ class MeshBridge(QObject):
             return {"success": False, "error": "Empty message"}
 
         if not self._backend_available or not self._client:
-            # Mock success
+            # Mock success with sending status
             from datetime import datetime, timezone
 
             new_msg = {
@@ -240,9 +270,14 @@ class MeshBridge(QObject):
                 "text": text,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "is_mine": True,
+                "delivery_status": "sending",
             }
             self._messages.append(new_msg)
             self.messagesChanged.emit()
+
+            # Simulate delivery
+            self._simulate_delivery(new_msg["id"])
+
             return {"success": True, "mock": True}
 
         try:

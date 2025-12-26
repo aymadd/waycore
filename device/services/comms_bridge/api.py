@@ -297,6 +297,12 @@ def _node_to_dict(node: Any) -> dict[str, Any]:
 
 def _message_to_dict(message: Any) -> dict[str, Any]:
     """Convert MeshMessage to dictionary."""
+    # Get delivery status (may be enum or string)
+    delivery_status = "sent"
+    if hasattr(message, "delivery_status"):
+        status = message.delivery_status
+        delivery_status = status.value if hasattr(status, "value") else str(status)
+
     return {
         "id": message.id,
         "from_node": message.from_node,
@@ -307,6 +313,7 @@ def _message_to_dict(message: Any) -> dict[str, Any]:
         "rx_time": message.rx_time.isoformat() if message.rx_time else None,
         "hop_count": message.hop_count,
         "acknowledged": message.acknowledged,
+        "delivery_status": delivery_status,
         "snr": message.snr,
         "rssi": message.rssi,
     }

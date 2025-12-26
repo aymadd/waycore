@@ -37,3 +37,16 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-merge-conflict
+  # Local hooks for project-specific tasks
+  - repo: local
+    hooks:
+      - id: generate-openapi
+        name: Generate OpenAPI specs
+        entry: python scripts/generate-openapi.py
+        language: python
+        pass_filenames: false
+        files: ^device/services/.*/api\.py$
+        additional_dependencies:
+          - fastapi>=0.115
+          - pydantic>=2
+          - aiosqlite>=0.20

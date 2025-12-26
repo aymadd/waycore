@@ -132,7 +132,7 @@ Message history for mesh network communications.
 | `snr` | REAL | Signal-to-noise ratio |
 | `hop_count` | INTEGER | Number of routing hops |
 | `acknowledged` | INTEGER | 1 if ACK received, 0 otherwise |
-| `delivery_status` | TEXT | Status: sent, delivered, failed |
+| `delivery_status` | TEXT | Status: pending, sending, sent, delivered, failed |
 | `metadata` | TEXT | JSON-encoded additional data |
 
 **Indexes**:

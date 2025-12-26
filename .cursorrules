@@ -200,6 +200,7 @@ Update the schema documentation when:
 ## Reference Documents
 
 - Architecture: `docs/architecture/architecture.md`
+- API Specs: `docs/api/` (auto-generated OpenAPI specs)
 - Database Schema: `docs/database-schema.md`
 - Implementation phases: `local_plan/08-implementation-phases.md`
 - Progress tracking: `docs/ai_instructions/progress_tracking.md`

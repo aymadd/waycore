@@ -250,22 +250,21 @@ Rectangle {
                         }
                     }
 
-                    // Message button
+                    // Message button - opens DM conversation
                     Button {
                         text: "💬"
                         font.pixelSize: 16
-                        visible: isOnline
                         onClicked: {
-                            // Navigate to chat with this node
-                            // For now, just go back to chat
                             var shell = meshNodes.parent
-                            while (shell && !shell.hasOwnProperty("navigateTo")) {
+                            while (shell && !shell.hasOwnProperty("openConversation")) {
                                 shell = shell.parent
                             }
-                            if (shell && shell.navigateTo) {
-                                shell.navigateTo("Meshtastic")
+                            if (shell && shell.openConversation) {
+                                shell.openConversation(modelData.node_id)
                             }
                         }
+                        ToolTip.visible: hovered
+                        ToolTip.text: "Send direct message"
                     }
                 }
             }

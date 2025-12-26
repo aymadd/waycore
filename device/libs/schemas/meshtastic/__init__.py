@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .messages import (
+    DeliveryStatus,
     MeshChannel,
     MeshMessage,
     MeshMessageCreate,
@@ -20,6 +21,7 @@ from .nodes import (
 
 __all__ = [
     # Messages
+    "DeliveryStatus",
     "MeshChannel",
     "MeshMessage",
     "MeshMessageCreate",

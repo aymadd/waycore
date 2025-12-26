@@ -82,6 +82,11 @@ Item {
 			id: meshNodeDetailsComponent
 			App.MeshNodeDetails {}
 		}
+
+		Component {
+			id: meshConversationComponent
+			App.MeshConversation {}
+		}
 	}
 
 	function navigateTo(appName) {
@@ -127,6 +132,11 @@ Item {
 	function openNodeDetails(nodeId) {
 		var details = meshNodeDetailsComponent.createObject(null, {nodeId: nodeId})
 		router.push(details)
+	}
+
+	function openConversation(nodeId) {
+		var conversation = meshConversationComponent.createObject(null, {node_id: nodeId})
+		router.push(conversation)
 	}
 
 	function navigateToSettings() {

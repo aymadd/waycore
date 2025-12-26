@@ -20,6 +20,16 @@ class MeshMessageType(str, Enum):
     ROUTING = "routing"
 
 
+class DeliveryStatus(str, Enum):
+    """Message delivery status."""
+
+    PENDING = "pending"  # Queued locally, not yet transmitted
+    SENDING = "sending"  # Being transmitted over radio
+    SENT = "sent"  # Transmitted successfully (no ACK requested)
+    DELIVERED = "delivered"  # ACK received from recipient
+    FAILED = "failed"  # Transmission failed or ACK timeout
+
+
 class MeshChannel(BaseModel):
     """Mesh network channel configuration."""
 
@@ -76,6 +86,10 @@ class MeshMessage(BaseModel):
     hop_limit: int = Field(default=3, ge=0, le=7, description="Maximum allowed hops")
     want_ack: bool = Field(default=True, description="Acknowledgment requested")
     acknowledged: bool = Field(default=False, description="Delivery confirmed")
+    delivery_status: DeliveryStatus = Field(
+        default=DeliveryStatus.SENT,
+        description="Delivery status",
+    )
     snr: float | None = Field(default=None, description="Signal-to-noise ratio")
     rssi: int | None = Field(default=None, description="Received signal strength")
 
