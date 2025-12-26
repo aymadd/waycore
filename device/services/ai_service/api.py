@@ -13,14 +13,14 @@ from .service import AIService
 def create_app(service: AIService) -> FastAPI:
     app = FastAPI(title="AI Service API")
 
-    @app.get("/health")  # type: ignore[misc]
+    @app.get("/health")
     async def health() -> dict[str, Any]:
         if service.is_healthy():
             return {"status": "ok"}
         raise HTTPException(status_code=503, detail="not ready")
 
     # Phase 7.4 will add inference endpoints here
-    @app.post("/api/inference")  # type: ignore[misc]
+    @app.post("/api/inference")
     async def inference(req: AIInferenceRequest) -> AIInferenceResponse:
         try:
             pre = preprocess_for_inference(req)
@@ -38,7 +38,7 @@ def create_app(service: AIService) -> FastAPI:
                 error_message=str(exc),
             )
 
-    @app.post("/api/image/classify")  # type: ignore[misc]
+    @app.post("/api/image/classify")
     async def image_classify(body: dict[str, Any]) -> AIInferenceResponse:
         model_id = str(body.get("model_id", "mobilenetv3"))
         input_data = body.get("input_data", {})
@@ -52,7 +52,7 @@ def create_app(service: AIService) -> FastAPI:
         pre = preprocess_for_inference(req)
         return run_inference(req, pre, response_source=service.response_source)
 
-    @app.post("/api/chat")  # type: ignore[misc]
+    @app.post("/api/chat")
     async def chat(body: dict[str, Any]) -> AIInferenceResponse:
         model_id = str(body.get("model_id", "phi3-mini"))
         question = str(body.get("question", "")).strip()

@@ -31,32 +31,32 @@ class NoteUpdate(BaseModel):
 def create_app(service: DataLoggerService) -> FastAPI:
     app = FastAPI(title="Data Logger API")
 
-    @app.get("/health")  # type: ignore[misc]
+    @app.get("/health")
     async def health() -> dict[str, Any]:
         if service.is_healthy():
             return {"status": "ok"}
         raise HTTPException(status_code=503, detail="not ready")
 
-    @app.get("/api/ai/latest")  # type: ignore[misc]
+    @app.get("/api/ai/latest")
     async def ai_latest(n: int = Query(50, ge=1, le=500)) -> list[dict[str, Any]]:
         return await service.latest_ai(n)
 
-    @app.get("/api/comms/latest")  # type: ignore[misc]
+    @app.get("/api/comms/latest")
     async def comms_latest(n: int = Query(50, ge=1, le=500)) -> list[dict[str, Any]]:
         return await service.latest_comms(n)
 
-    @app.get("/api/events/latest")  # type: ignore[misc]
+    @app.get("/api/events/latest")
     async def events_latest(n: int = Query(50, ge=1, le=500)) -> list[dict[str, Any]]:
         return await service.latest_events(n)
 
     # --- Preferences Endpoints ---
 
-    @app.get("/api/preferences")  # type: ignore[misc]
+    @app.get("/api/preferences")
     async def get_all_preferences() -> dict[str, str]:
         """Get all user preferences."""
         return await service.get_all_preferences()
 
-    @app.get("/api/preferences/{key}")  # type: ignore[misc]
+    @app.get("/api/preferences/{key}")
     async def get_preference(key: str) -> dict[str, Any]:
         """Get a single preference by key."""
         value = await service.get_preference(key)
@@ -64,7 +64,7 @@ def create_app(service: DataLoggerService) -> FastAPI:
             raise HTTPException(status_code=404, detail=f"Preference '{key}' not found")
         return {"key": key, "value": value}
 
-    @app.put("/api/preferences/{key}")  # type: ignore[misc]
+    @app.put("/api/preferences/{key}")
     async def set_preference(key: str, body: PreferenceUpdate) -> dict[str, Any]:
         """Update a preference value."""
         success = await service.set_preference(key, body.value)
@@ -75,7 +75,7 @@ def create_app(service: DataLoggerService) -> FastAPI:
             )
         return {"key": key, "value": body.value, "success": True}
 
-    @app.post("/api/preferences/reset")  # type: ignore[misc]
+    @app.post("/api/preferences/reset")
     async def reset_preferences() -> dict[str, Any]:
         """Reset all preferences to default values."""
         await service.reset_preferences()
@@ -84,19 +84,19 @@ def create_app(service: DataLoggerService) -> FastAPI:
 
     # --- Notes Endpoints ---
 
-    @app.get("/api/notes")  # type: ignore[misc]
+    @app.get("/api/notes")
     async def get_all_notes() -> list[dict[str, Any]]:
         """Get all notes, ordered by most recently updated."""
         return await service.get_all_notes()
 
-    @app.post("/api/notes")  # type: ignore[misc]
+    @app.post("/api/notes")
     async def create_note(body: NoteCreate) -> dict[str, Any]:
         """Create a new note."""
         note_id = await service.create_note(body.title, body.content)
         note = await service.get_note(note_id)
         return {"success": True, "note": note}
 
-    @app.get("/api/notes/{note_id}")  # type: ignore[misc]
+    @app.get("/api/notes/{note_id}")
     async def get_note(note_id: int) -> dict[str, Any]:
         """Get a single note by ID."""
         note = await service.get_note(note_id)
@@ -104,7 +104,7 @@ def create_app(service: DataLoggerService) -> FastAPI:
             raise HTTPException(status_code=404, detail="Note not found")
         return note
 
-    @app.put("/api/notes/{note_id}")  # type: ignore[misc]
+    @app.put("/api/notes/{note_id}")
     async def update_note(note_id: int, body: NoteUpdate) -> dict[str, Any]:
         """Update a note."""
         success = await service.update_note(note_id, body.title, body.content)
@@ -113,7 +113,7 @@ def create_app(service: DataLoggerService) -> FastAPI:
         note = await service.get_note(note_id)
         return {"success": True, "note": note}
 
-    @app.delete("/api/notes/{note_id}")  # type: ignore[misc]
+    @app.delete("/api/notes/{note_id}")
     async def delete_note(note_id: int) -> dict[str, Any]:
         """Delete a note."""
         success = await service.delete_note(note_id)
@@ -123,7 +123,7 @@ def create_app(service: DataLoggerService) -> FastAPI:
 
     # --- Factory Reset ---
 
-    @app.post("/api/factory-reset")  # type: ignore[misc]
+    @app.post("/api/factory-reset")
     async def factory_reset() -> dict[str, Any]:
         """
         Clear all user data: notes, preferences, logs.

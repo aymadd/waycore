@@ -14,3 +14,4 @@ NotesList 1.0 NotesList.qml
 NoteEditor 1.0 NoteEditor.qml
 MeshChat 1.0 MeshChat.qml
 MeshNodes 1.0 MeshNodes.qml
+MeshNodeDetails 1.0 MeshNodeDetails.qml

@@ -135,24 +135,24 @@ def _update_mock_elevation() -> None:
 def create_app(service: CoreDaemonService) -> FastAPI:
     app = FastAPI(title="Core Daemon API")
 
-    @app.get("/health")  # type: ignore[misc]
+    @app.get("/health")
     async def health() -> dict[str, Any]:
         if service.is_healthy():
             return {"status": "ok"}
         raise HTTPException(status_code=503, detail="not ready")
 
-    @app.get("/api/status")  # type: ignore[misc]
+    @app.get("/api/status")
     async def status() -> dict[str, Any]:
         return service.get_status()
 
-    @app.post("/api/command")  # type: ignore[misc]
+    @app.post("/api/command")
     async def command(cmd: SystemCommand) -> dict[str, Any]:
         ok = await service.handle_command(cmd.command, cmd.parameters)
         return {"success": ok}
 
     # --- System Information Endpoints ---
 
-    @app.get("/api/system/time")  # type: ignore[misc]
+    @app.get("/api/system/time")
     async def get_system_time() -> SystemTimeResponse:
         """Get current system time and timezone."""
         uptime = int(time.monotonic() - _START_TIME)
@@ -162,7 +162,7 @@ def create_app(service: CoreDaemonService) -> FastAPI:
             uptime_seconds=uptime,
         )
 
-    @app.get("/api/system/battery")  # type: ignore[misc]
+    @app.get("/api/system/battery")
     async def get_battery() -> BatteryResponse:
         """Get battery status."""
         _update_mock_battery()
@@ -185,13 +185,13 @@ def create_app(service: CoreDaemonService) -> FastAPI:
             estimated_minutes=estimated,
         )
 
-    @app.post("/api/system/battery/charging")  # type: ignore[misc]
+    @app.post("/api/system/battery/charging")
     async def set_charging(enabled: bool) -> dict[str, Any]:
         """Toggle charging state (for testing)."""
         _battery_state["is_charging"] = enabled
         return {"charging": enabled}
 
-    @app.get("/api/system/temperature")  # type: ignore[misc]
+    @app.get("/api/system/temperature")
     async def get_temperature() -> TemperatureResponse:
         """Get temperature reading."""
         _update_mock_temperature()
@@ -201,7 +201,7 @@ def create_app(service: CoreDaemonService) -> FastAPI:
             timestamp=datetime.now(timezone.utc),
         )
 
-    @app.get("/api/system/info")  # type: ignore[misc]
+    @app.get("/api/system/info")
     async def get_system_info() -> SystemInfoResponse:
         """Get system information."""
         # Detect device model
@@ -224,7 +224,7 @@ def create_app(service: CoreDaemonService) -> FastAPI:
 
     # --- Sensor Endpoints ---
 
-    @app.get("/api/sensors/compass")  # type: ignore[misc]
+    @app.get("/api/sensors/compass")
     async def get_compass() -> CompassResponse:
         """Get compass/magnetometer reading with GPS and elevation."""
         _update_mock_compass()
@@ -254,13 +254,13 @@ def create_app(service: CoreDaemonService) -> FastAPI:
             elevation_m=elevation,
         )
 
-    @app.post("/api/sensors/compass/calibrate")  # type: ignore[misc]
+    @app.post("/api/sensors/compass/calibrate")
     async def calibrate_compass() -> dict[str, Any]:
         """Start compass calibration (mock: instant success)."""
         _compass_state["calibrated"] = True
         return {"success": True, "message": "Calibration complete"}
 
-    @app.post("/api/sensors/compass/heading")  # type: ignore[misc]
+    @app.post("/api/sensors/compass/heading")
     async def set_compass_heading(heading: float) -> dict[str, Any]:
         """Set compass heading (for testing)."""
         _compass_state["heading"] = heading % 360
@@ -268,7 +268,7 @@ def create_app(service: CoreDaemonService) -> FastAPI:
 
     # --- System Management ---
 
-    @app.post("/api/system/factory-reset")  # type: ignore[misc]
+    @app.post("/api/system/factory-reset")
     async def factory_reset() -> dict[str, Any]:
         """
         Factory reset: clears all user data and resets to defaults.
@@ -309,7 +309,7 @@ def create_app(service: CoreDaemonService) -> FastAPI:
 
     # --- Storage Status ---
 
-    @app.get("/api/system/storage")  # type: ignore[misc]
+    @app.get("/api/system/storage")
     async def get_storage_status() -> dict[str, Any]:
         """
         Get storage usage information.
@@ -410,7 +410,7 @@ def create_app(service: CoreDaemonService) -> FastAPI:
 
     # --- Sensor Registry ---
 
-    @app.get("/api/sensors/registry")  # type: ignore[misc]
+    @app.get("/api/sensors/registry")
     async def get_all_sensors() -> list[dict[str, Any]]:
         """
         Get all registered sensors.
@@ -430,7 +430,7 @@ def create_app(service: CoreDaemonService) -> FastAPI:
 
         return [s.to_dict() for s in registry.sensors]
 
-    @app.get("/api/sensors/registry/{sensor_id}")  # type: ignore[misc]
+    @app.get("/api/sensors/registry/{sensor_id}")
     async def get_sensor(sensor_id: str) -> dict[str, Any]:
         """Get a specific sensor by ID."""
         from device.libs.sensors import get_registry
@@ -441,7 +441,7 @@ def create_app(service: CoreDaemonService) -> FastAPI:
             raise HTTPException(status_code=404, detail=f"Sensor {sensor_id} not found")
         return sensor.to_dict()
 
-    @app.get("/api/sensors/registry/type/{sensor_type}")  # type: ignore[misc]
+    @app.get("/api/sensors/registry/type/{sensor_type}")
     async def get_sensors_by_type(sensor_type: str) -> list[dict[str, Any]]:
         """Get all sensors of a specific type."""
         from device.libs.sensors import SensorType, get_registry
@@ -455,7 +455,7 @@ def create_app(service: CoreDaemonService) -> FastAPI:
             ) from e
         return [s.to_dict() for s in registry.get_sensors_by_type(st)]
 
-    @app.post("/api/sensors/registry/discover")  # type: ignore[misc]
+    @app.post("/api/sensors/registry/discover")
     async def discover_sensors() -> dict[str, Any]:
         """
         Run sensor discovery.

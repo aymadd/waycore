@@ -77,6 +77,11 @@ Item {
 			id: meshNodesComponent
 			App.MeshNodes {}
 		}
+
+		Component {
+			id: meshNodeDetailsComponent
+			App.MeshNodeDetails {}
+		}
 	}
 
 	function navigateTo(appName) {
@@ -117,6 +122,11 @@ Item {
 	function openNoteEditor(noteId) {
 		var editor = noteEditorComponent.createObject(null, {noteId: noteId})
 		router.push(editor)
+	}
+
+	function openNodeDetails(nodeId) {
+		var details = meshNodeDetailsComponent.createObject(null, {nodeId: nodeId})
+		router.push(details)
 	}
 
 	function navigateToSettings() {

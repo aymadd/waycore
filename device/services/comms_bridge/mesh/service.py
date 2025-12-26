@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from device.drivers.mock.mesh_network import MockMeshNetwork
 from device.libs.hil.interfaces.mesh_network import IMeshNetwork
@@ -14,6 +15,9 @@ from device.libs.schemas.meshtastic import (
     MeshNode,
     NodeStatus,
 )
+
+if TYPE_CHECKING:
+    from device.libs.database import AsyncSQLite
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +32,7 @@ class MeshChatService:
     def __init__(
         self,
         mesh_driver: IMeshNetwork | None = None,
-        db: Any | None = None,
+        db: AsyncSQLite | None = None,
     ) -> None:
         """
         Initialize mesh chat service.
@@ -38,10 +42,11 @@ class MeshChatService:
             db: Database connection for message persistence (optional)
         """
         self._driver = mesh_driver or MockMeshNetwork()
-        self._db = db
+        self._db: AsyncSQLite | None = db
         self._message_history: list[MeshMessage] = []
+        self._history_loaded = False
 
-        logger.info("MeshChatService initialized")
+        logger.info("MeshChatService initialized (db=%s)", "connected" if db else "none")
 
     @property
     def my_node_id(self) -> str:
@@ -217,27 +222,150 @@ class MeshChatService:
     # Database persistence
 
     def _persist_message(self, message: MeshMessage) -> None:
-        """Persist a message to the database."""
+        """Persist a message to the database (async via task)."""
         if not self._db:
             return
 
+        async def _save() -> None:
+            try:
+                assert self._db is not None
+                await self._db.save_mesh_message(message)
+                logger.debug(f"Persisted message {message.id} to database")
+            except Exception as e:
+                logger.error(f"Failed to persist message: {e}")
+
+        # Schedule the async save
         try:
-            # This would use the actual database methods
-            # For now, just log
-            logger.debug(f"Would persist message {message.id} to database")
-        except Exception as e:
-            logger.error(f"Failed to persist message: {e}")
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.create_task(_save())
+            else:
+                loop.run_until_complete(_save())
+        except RuntimeError:
+            # No event loop available
+            logger.warning("No event loop for message persistence")
 
     async def load_history_from_db(self, limit: int = 100) -> None:
         """Load message history from database."""
-        if not self._db:
+        if not self._db or self._history_loaded:
             return
 
         try:
-            # This would load from actual database
-            logger.debug(f"Would load last {limit} messages from database")
+            rows = await self._db.get_mesh_messages(limit=limit)
+            logger.info(f"Loading {len(rows)} messages from database")
+
+            for row in rows:
+                # Convert database row to MeshMessage
+                msg = self._row_to_message(row)
+                if msg and msg.id not in [m.id for m in self._message_history]:
+                    self._message_history.append(msg)
+
+            self._history_loaded = True
+            logger.info(f"Loaded {len(self._message_history)} messages into history")
         except Exception as e:
             logger.error(f"Failed to load message history: {e}")
+
+    def _row_to_message(self, row: dict[str, Any]) -> MeshMessage | None:
+        """Convert a database row to a MeshMessage."""
+        try:
+            return MeshMessage(
+                id=str(row.get("id", "")),
+                from_node=row.get("from_node", ""),
+                to_node=row.get("to_node"),
+                channel=row.get("channel", 0),
+                text=row.get("content", ""),
+                timestamp=datetime.fromisoformat(row["ts"]) if row.get("ts") else None,
+                rssi=row.get("rssi"),
+                snr=row.get("snr"),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to parse message row: {e}")
+            return None
+
+    # Contact management
+
+    async def get_contact(self, node_id: str) -> dict[str, Any] | None:
+        """Get contact info for a node."""
+        if not self._db:
+            return None
+        return await self._db.get_mesh_contact(node_id)
+
+    async def get_all_contacts(self) -> list[dict[str, Any]]:
+        """Get all mesh contacts."""
+        if not self._db:
+            return []
+        return await self._db.get_all_mesh_contacts()
+
+    async def get_favorite_contacts(self) -> list[dict[str, Any]]:
+        """Get all favorited contacts."""
+        if not self._db:
+            return []
+        return await self._db.get_favorite_contacts()
+
+    async def toggle_favorite(self, node_id: str) -> bool:
+        """Toggle favorite status. Returns new state."""
+        if not self._db:
+            logger.warning("No database for contact persistence")
+            return False
+        return await self._db.toggle_favorite(node_id)
+
+    async def set_contact_alias(self, node_id: str, alias: str) -> dict[str, Any] | None:
+        """Set alias for a contact."""
+        if not self._db:
+            return None
+        return await self._db.upsert_mesh_contact(node_id, alias=alias)
+
+    async def set_contact_notes(self, node_id: str, notes: str) -> dict[str, Any] | None:
+        """Set notes for a contact."""
+        if not self._db:
+            return None
+        return await self._db.upsert_mesh_contact(node_id, notes=notes)
+
+    async def delete_contact(self, node_id: str) -> bool:
+        """Delete a contact."""
+        if not self._db:
+            return False
+        return await self._db.delete_mesh_contact(node_id)
+
+    def get_nodes_with_contacts(self) -> list[dict[str, Any]]:
+        """Get nodes with contact info merged (sync version for UI)."""
+        nodes = self._driver.get_nodes()
+        # Contact info will be loaded async in the API layer
+        return [
+            {
+                **self._node_to_dict(n),
+                "is_favorite": False,
+                "alias": None,
+                "notes": None,
+            }
+            for n in nodes
+        ]
+
+    def _node_to_dict(self, node: MeshNode) -> dict[str, Any]:
+        """Convert MeshNode to dictionary."""
+        return {
+            "node_id": node.node_id,
+            "short_name": node.short_name,
+            "long_name": node.long_name,
+            "hardware": (
+                node.hardware.value if hasattr(node.hardware, "value") else str(node.hardware)
+            ),
+            "status": node.status.value if hasattr(node.status, "value") else str(node.status),
+            "last_seen": node.last_seen.isoformat() if node.last_seen else None,
+            "battery_level": node.battery_level,
+            "snr": node.snr,
+            "rssi": node.rssi,
+            "hops_away": node.hops_away,
+            "position": (
+                {
+                    "latitude": node.position.latitude,
+                    "longitude": node.position.longitude,
+                    "altitude": node.position.altitude,
+                }
+                if node.position
+                else None
+            ),
+        }
 
 
 # Singleton instance
@@ -249,6 +377,21 @@ def get_mesh_service() -> MeshChatService:
     global _mesh_service
     if _mesh_service is None:
         _mesh_service = MeshChatService()
+    return _mesh_service
+
+
+def init_mesh_service(db: AsyncSQLite | None = None) -> MeshChatService:
+    """
+    Initialize the mesh service singleton with database.
+
+    Args:
+        db: Database connection for message persistence
+
+    Returns:
+        The initialized mesh service
+    """
+    global _mesh_service
+    _mesh_service = MeshChatService(db=db)
     return _mesh_service
 
 

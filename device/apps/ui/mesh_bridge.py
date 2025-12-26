@@ -274,6 +274,97 @@ class MeshBridge(QObject):
             logger.debug(f"Failed to get conversation: {e}")
             return {"messages": [], "count": 0}
 
+    # Contacts/Favorites
+
+    @Slot(result="QVariant")  # type: ignore[arg-type]
+    def getNodesWithContacts(self) -> dict[str, Any]:
+        """Get nodes with contact info merged (favorites, aliases, etc.)."""
+        if not self._backend_available or not self._client:
+            # Add mock favorite data to nodes
+            nodes = self._get_mock_nodes()
+            for i, node in enumerate(nodes):
+                # Mark first node as favorite for demo
+                node["is_favorite"] = i == 0
+                node["alias"] = None
+                node["notes"] = None
+            # Sort favorites first
+            nodes.sort(key=lambda n: (not n.get("is_favorite", False), n.get("short_name", "")))
+            return {"nodes": nodes, "count": len(nodes)}
+
+        try:
+            result = self._client.get("/api/mesh/nodes/enriched")
+            self._nodes = result.get("nodes", [])
+            return result
+        except Exception as e:
+            logger.debug(f"Failed to get enriched nodes: {e}")
+            return {"nodes": self._nodes, "count": len(self._nodes)}
+
+    @Slot(str, result="QVariant")  # type: ignore[arg-type]
+    def toggleFavorite(self, node_id: str) -> dict[str, Any]:
+        """Toggle favorite status for a node."""
+        if not self._backend_available or not self._client:
+            # Update mock data
+            for node in self._nodes:
+                if node.get("node_id") == node_id:
+                    node["is_favorite"] = not node.get("is_favorite", False)
+                    self.nodesChanged.emit()
+                    return {"node_id": node_id, "is_favorite": node["is_favorite"]}
+            return {"node_id": node_id, "is_favorite": False}
+
+        try:
+            result = self._client.post(f"/api/mesh/contacts/{node_id}/favorite", json={})
+            self.nodesChanged.emit()
+            return result
+        except Exception as e:
+            logger.error(f"Failed to toggle favorite: {e}")
+            return {"node_id": node_id, "is_favorite": False, "error": str(e)}
+
+    @Slot(str, result="QVariant")  # type: ignore[arg-type]
+    def getContact(self, node_id: str) -> dict[str, Any]:
+        """Get contact info for a node."""
+        if not self._backend_available or not self._client:
+            # Return mock contact
+            for node in self._nodes:
+                if node.get("node_id") == node_id:
+                    return {
+                        "contact": {
+                            "node_id": node_id,
+                            "alias": node.get("alias"),
+                            "notes": node.get("notes"),
+                            "is_favorite": node.get("is_favorite", False),
+                        }
+                    }
+            return {
+                "contact": {"node_id": node_id, "alias": None, "notes": None, "is_favorite": False}
+            }
+
+        try:
+            return self._client.get(f"/api/mesh/contacts/{node_id}")
+        except Exception as e:
+            logger.debug(f"Failed to get contact: {e}")
+            return {
+                "contact": {"node_id": node_id, "alias": None, "notes": None, "is_favorite": False}
+            }
+
+    @Slot(str, str, result=bool)  # type: ignore[arg-type]
+    def setContactAlias(self, node_id: str, alias: str) -> bool:
+        """Set alias for a contact."""
+        if not self._backend_available or not self._client:
+            for node in self._nodes:
+                if node.get("node_id") == node_id:
+                    node["alias"] = alias if alias else None
+                    self.nodesChanged.emit()
+                    return True
+            return False
+
+        try:
+            self._client.put(f"/api/mesh/contacts/{node_id}", json={"alias": alias})
+            self.nodesChanged.emit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to set alias: {e}")
+            return False
+
     # Properties
 
     @Property(bool, notify=statusChanged)  # type: ignore[arg-type]

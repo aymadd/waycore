@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiosqlite
 
 from device.libs.schemas.ai import AIInferenceResponse
 from device.libs.schemas.comms import MessageReceived
+
+if TYPE_CHECKING:
+    from device.libs.schemas.meshtastic import MeshMessage
 
 
 class DatabaseError(RuntimeError):
@@ -97,6 +100,15 @@ class AsyncSQLite:
                 discovered_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
                 updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
             );
+
+            CREATE TABLE IF NOT EXISTS mesh_contacts (
+                node_id TEXT PRIMARY KEY NOT NULL,
+                alias TEXT,
+                notes TEXT,
+                is_favorite INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            );
             """
         )
         await self._conn.commit()
@@ -154,22 +166,42 @@ class AsyncSQLite:
 
     async def save_mesh_message(
         self,
-        message_id: str,
-        from_node: str,
-        to_node: str | None,
-        text: str,
+        message: MeshMessage | None = None,
+        *,
+        message_id: str = "",
+        from_node: str = "",
+        to_node: str | None = None,
+        text: str = "",
         channel: int = 0,
         rssi: float | None = None,
         snr: float | None = None,
     ) -> None:
-        """Save a mesh network message."""
+        """
+        Save a mesh network message.
+
+        Can be called with either a MeshMessage object or individual parameters.
+        """
         assert self._conn is not None
+
+        # Extract values from MeshMessage if provided
+        if message is not None:
+            message_id = message.id
+            from_node = message.from_node
+            to_node = message.to_node
+            text = message.text
+            channel = message.channel
+            rssi = float(message.rssi) if message.rssi is not None else None
+            snr = message.snr
+            ts = message.timestamp.isoformat() if message.timestamp else None
+        else:
+            ts = None
+
         metadata = json.dumps({"message_id": message_id, "channel": channel})
         await self._conn.execute(
             """
             INSERT INTO comms_messages
-            (transport, from_node, to_node, content, channel, rssi, snr, metadata)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (transport, from_node, to_node, content, channel, rssi, snr, metadata, ts)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, strftime('%Y-%m-%dT%H:%M:%fZ','now')))
             """,
             (
                 "mesh",  # transport type
@@ -180,6 +212,7 @@ class AsyncSQLite:
                 rssi,
                 snr,
                 metadata,
+                ts,
             ),
         )
         await self._conn.commit()
@@ -221,6 +254,142 @@ class AsyncSQLite:
         """Delete all mesh messages (for factory reset)."""
         assert self._conn is not None
         cursor = await self._conn.execute("DELETE FROM comms_messages WHERE transport = 'mesh'")
+        await self._conn.commit()
+        return int(cursor.rowcount) if cursor.rowcount else 0
+
+    # --- Mesh Contacts ---
+
+    async def get_mesh_contact(self, node_id: str) -> dict[str, Any] | None:
+        """Get a mesh contact by node ID."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            "SELECT * FROM mesh_contacts WHERE node_id = ?",
+            (node_id,),
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is None:
+            return None
+        assert cursor.description is not None
+        cols = [c[0] for c in cursor.description]
+        return dict(zip(cols, row))
+
+    async def get_all_mesh_contacts(self) -> list[dict[str, Any]]:
+        """Get all mesh contacts, favorites first."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            SELECT * FROM mesh_contacts
+            ORDER BY is_favorite DESC, alias ASC, node_id ASC
+            """
+        )
+        assert cursor.description is not None
+        cols = [c[0] for c in cursor.description]
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return [dict(zip(cols, row)) for row in rows]
+
+    async def get_favorite_contacts(self) -> list[dict[str, Any]]:
+        """Get only favorited contacts."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            "SELECT * FROM mesh_contacts WHERE is_favorite = 1 ORDER BY alias ASC, node_id ASC"
+        )
+        assert cursor.description is not None
+        cols = [c[0] for c in cursor.description]
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return [dict(zip(cols, row)) for row in rows]
+
+    async def upsert_mesh_contact(
+        self,
+        node_id: str,
+        alias: str | None = None,
+        notes: str | None = None,
+        is_favorite: bool | None = None,
+    ) -> dict[str, Any]:
+        """Create or update a mesh contact."""
+        assert self._conn is not None
+
+        # Check if contact exists
+        existing = await self.get_mesh_contact(node_id)
+
+        if existing:
+            # Update only provided fields
+            updates = []
+            params: list[Any] = []
+            if alias is not None:
+                updates.append("alias = ?")
+                params.append(alias)
+            if notes is not None:
+                updates.append("notes = ?")
+                params.append(notes)
+            if is_favorite is not None:
+                updates.append("is_favorite = ?")
+                params.append(1 if is_favorite else 0)
+            if updates:
+                updates.append("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')")
+                params.append(node_id)
+                await self._conn.execute(
+                    f"UPDATE mesh_contacts SET {', '.join(updates)} WHERE node_id = ?",
+                    tuple(params),
+                )
+                await self._conn.commit()
+        else:
+            # Insert new contact
+            await self._conn.execute(
+                """
+                INSERT INTO mesh_contacts (node_id, alias, notes, is_favorite)
+                VALUES (?, ?, ?, ?)
+                """,
+                (node_id, alias, notes, 1 if is_favorite else 0),
+            )
+            await self._conn.commit()
+
+        result = await self.get_mesh_contact(node_id)
+        assert result is not None
+        return result
+
+    async def toggle_favorite(self, node_id: str) -> bool:
+        """Toggle favorite status for a node. Returns new favorite state."""
+        assert self._conn is not None
+
+        existing = await self.get_mesh_contact(node_id)
+        if existing:
+            new_state = not bool(existing["is_favorite"])
+            await self._conn.execute(
+                """
+                UPDATE mesh_contacts
+                SET is_favorite = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                WHERE node_id = ?
+                """,
+                (1 if new_state else 0, node_id),
+            )
+        else:
+            # Create new contact as favorite
+            new_state = True
+            await self._conn.execute(
+                "INSERT INTO mesh_contacts (node_id, is_favorite) VALUES (?, 1)",
+                (node_id,),
+            )
+
+        await self._conn.commit()
+        return new_state
+
+    async def delete_mesh_contact(self, node_id: str) -> bool:
+        """Delete a mesh contact. Returns True if deleted."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            "DELETE FROM mesh_contacts WHERE node_id = ?",
+            (node_id,),
+        )
+        await self._conn.commit()
+        return bool(cursor.rowcount)
+
+    async def delete_all_mesh_contacts(self) -> int:
+        """Delete all mesh contacts (for factory reset). Returns count deleted."""
+        assert self._conn is not None
+        cursor = await self._conn.execute("DELETE FROM mesh_contacts")
         await self._conn.commit()
         return int(cursor.rowcount) if cursor.rowcount else 0
 

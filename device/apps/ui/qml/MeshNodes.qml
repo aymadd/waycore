@@ -17,21 +17,39 @@ Rectangle {
     function refreshNodes() {
         console.log("MeshNodes: refreshNodes called, MeshBridge =", MeshBridge)
         if (MeshBridge) {
-            var result = MeshBridge.getNodes()
-            console.log("MeshNodes: getNodes result =", JSON.stringify(result))
+            // Use enriched endpoint with contact/favorite info
+            var result = MeshBridge.getNodesWithContacts()
+            console.log("MeshNodes: getNodesWithContacts result =", JSON.stringify(result))
             if (result && result.nodes) {
                 nodes = result.nodes
                 console.log("MeshNodes: loaded", nodes.length, "nodes")
             }
         } else {
             console.log("MeshNodes: MeshBridge not available, using inline mock")
-            // Mock data
+            // Mock data with favorites
             nodes = [
-                { node_id: "!a1b2c3d4", short_name: "ALPH", long_name: "Alpha", status: "online", battery_level: 85, last_seen: new Date().toISOString(), hops_away: 0 },
-                { node_id: "!b2c3d4e5", short_name: "BRVO", long_name: "Bravo", status: "online", battery_level: 72, last_seen: new Date().toISOString(), hops_away: 1 },
-                { node_id: "!c3d4e5f6", short_name: "CHRL", long_name: "Charlie", status: "offline", battery_level: 45, last_seen: "2025-12-24T10:00:00Z", hops_away: 2 },
-                { node_id: "!d4e5f6g7", short_name: "DELT", long_name: "Delta", status: "online", battery_level: 95, last_seen: new Date().toISOString(), hops_away: 1 },
+                { node_id: "!a1b2c3d4", short_name: "ALPH", long_name: "Alpha", status: "online", battery_level: 85, last_seen: new Date().toISOString(), hops_away: 0, is_favorite: true },
+                { node_id: "!b2c3d4e5", short_name: "BRVO", long_name: "Bravo", status: "online", battery_level: 72, last_seen: new Date().toISOString(), hops_away: 1, is_favorite: false },
+                { node_id: "!c3d4e5f6", short_name: "CHRL", long_name: "Charlie", status: "offline", battery_level: 45, last_seen: "2025-12-24T10:00:00Z", hops_away: 2, is_favorite: false },
+                { node_id: "!d4e5f6g7", short_name: "DELT", long_name: "Delta", status: "online", battery_level: 95, last_seen: new Date().toISOString(), hops_away: 1, is_favorite: false },
             ]
+        }
+    }
+
+    function toggleFavorite(nodeId, index) {
+        if (MeshBridge) {
+            var result = MeshBridge.toggleFavorite(nodeId)
+            console.log("Toggle favorite result:", JSON.stringify(result))
+            // Update local array
+            var updatedNodes = nodes.slice()
+            updatedNodes[index].is_favorite = result.is_favorite
+            // Re-sort: favorites first
+            updatedNodes.sort(function(a, b) {
+                if (a.is_favorite && !b.is_favorite) return -1
+                if (!a.is_favorite && b.is_favorite) return 1
+                return a.short_name.localeCompare(b.short_name)
+            })
+            nodes = updatedNodes
         }
     }
 
@@ -125,11 +143,37 @@ Rectangle {
                 color: App.Theme.surface
 
                 property bool isOnline: modelData.status === "online"
+                property bool isFavorite: modelData.is_favorite || false
+
+                // Make the whole row tappable
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        // Navigate to node details
+                        var shell = meshNodes.parent
+                        while (shell && !shell.hasOwnProperty("openNodeDetails")) {
+                            shell = shell.parent
+                        }
+                        if (shell && shell.openNodeDetails) {
+                            shell.openNodeDetails(modelData.node_id)
+                        }
+                    }
+                }
 
                 RowLayout {
                     anchors.fill: parent
                     anchors.margins: App.Theme.spacingSmall
                     spacing: App.Theme.spacingSmall
+
+                    // Favorite button
+                    Button {
+                        text: isFavorite ? "⭐" : "☆"
+                        font.pixelSize: 20
+                        flat: true
+                        onClicked: toggleFavorite(modelData.node_id, index)
+                        ToolTip.visible: hovered
+                        ToolTip.text: isFavorite ? "Remove from favorites" : "Add to favorites"
+                    }
 
                     // Status indicator
                     Rectangle {
@@ -148,14 +192,16 @@ Rectangle {
                             spacing: App.Theme.spacingSmall
 
                             Text {
-                                text: modelData.short_name
+                                // Show alias if set, otherwise short_name
+                                text: modelData.alias || modelData.short_name
                                 color: App.Theme.textPrimary
                                 font.pixelSize: App.Theme.h3Size
                                 font.bold: true
                             }
 
                             Text {
-                                text: modelData.long_name || ""
+                                // Show original name if alias is set
+                                text: modelData.alias ? ("(" + modelData.short_name + ")") : (modelData.long_name || "")
                                 color: App.Theme.textSecondary
                                 font.pixelSize: App.Theme.bodySize
                             }
@@ -170,6 +216,14 @@ Rectangle {
 
                         RowLayout {
                             spacing: App.Theme.spacingMedium
+
+                            // Signal strength bars
+                            UI.SignalBars {
+                                visible: modelData.snr !== undefined && modelData.snr !== null
+                                snr: modelData.snr || 0
+                                width: 20
+                                height: 14
+                            }
 
                             // Battery
                             Text {

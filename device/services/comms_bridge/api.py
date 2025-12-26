@@ -6,26 +6,34 @@ from typing import Any
 from device.libs.schemas.comms import SendMessageRequest
 from device.libs.schemas.meshtastic import MeshMessageCreate
 from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from .mesh.service import get_mesh_service
 from .service import CommsBridgeService
 
 
+class ContactUpdate(BaseModel):
+    """Request body for updating contact info."""
+
+    alias: str | None = Field(default=None, max_length=50)
+    notes: str | None = Field(default=None, max_length=500)
+
+
 def create_app(service: CommsBridgeService) -> FastAPI:
     app = FastAPI(title="Comms Bridge API")
 
-    @app.get("/health")  # type: ignore[misc]
+    @app.get("/health")
     async def health() -> dict[str, Any]:
         if service.is_healthy():
             return {"status": "ok"}
         raise HTTPException(status_code=503, detail="not ready")
 
-    @app.get("/api/radios")  # type: ignore[misc]
+    @app.get("/api/radios")
     async def radios() -> dict[str, Any]:
         status = await service._manager.get_status()  # deliberately accessing for MVP
         return {"radios": {k: s.__dict__ for k, s in status.items()}}
 
-    @app.post("/api/send")  # type: ignore[misc]
+    @app.post("/api/send")
     async def send(req: SendMessageRequest) -> dict[str, Any]:
         ok = await service._manager.send(
             content=req.content.encode("utf-8"),
@@ -38,13 +46,13 @@ def create_app(service: CommsBridgeService) -> FastAPI:
 
     # --- Mesh Chat Endpoints ---
 
-    @app.get("/api/mesh/status")  # type: ignore[misc]
+    @app.get("/api/mesh/status")
     async def mesh_status() -> dict[str, Any]:
         """Get mesh network status."""
         mesh = get_mesh_service()
         return mesh.get_status()
 
-    @app.get("/api/mesh/nodes")  # type: ignore[misc]
+    @app.get("/api/mesh/nodes")
     async def mesh_nodes(
         online_only: bool = Query(False, description="Only return online nodes"),
     ) -> dict[str, Any]:
@@ -62,7 +70,7 @@ def create_app(service: CommsBridgeService) -> FastAPI:
             "my_node": _node_to_dict(mesh.my_node_info),
         }
 
-    @app.get("/api/mesh/nodes/{node_id}")  # type: ignore[misc]
+    @app.get("/api/mesh/nodes/{node_id}")
     async def mesh_node(node_id: str) -> dict[str, Any]:
         """Get a specific mesh node."""
         mesh = get_mesh_service()
@@ -73,7 +81,7 @@ def create_app(service: CommsBridgeService) -> FastAPI:
 
         return {"node": _node_to_dict(node)}
 
-    @app.get("/api/mesh/messages")  # type: ignore[misc]
+    @app.get("/api/mesh/messages")
     async def mesh_messages(
         limit: int = Query(100, ge=1, le=500, description="Max messages to return"),
         since: str | None = Query(None, description="ISO timestamp to filter from"),
@@ -96,7 +104,7 @@ def create_app(service: CommsBridgeService) -> FastAPI:
             "count": len(messages),
         }
 
-    @app.get("/api/mesh/messages/{message_id}")  # type: ignore[misc]
+    @app.get("/api/mesh/messages/{message_id}")
     async def mesh_message(message_id: str) -> dict[str, Any]:
         """Get a specific message."""
         mesh = get_mesh_service()
@@ -107,7 +115,7 @@ def create_app(service: CommsBridgeService) -> FastAPI:
 
         return {"message": _message_to_dict(message)}
 
-    @app.post("/api/mesh/messages")  # type: ignore[misc]
+    @app.post("/api/mesh/messages")
     async def send_mesh_message(req: MeshMessageCreate) -> dict[str, Any]:
         """Send a mesh message."""
         mesh = get_mesh_service()
@@ -122,7 +130,7 @@ def create_app(service: CommsBridgeService) -> FastAPI:
             "message": _message_to_dict(message),
         }
 
-    @app.get("/api/mesh/conversation/{node_id}")  # type: ignore[misc]
+    @app.get("/api/mesh/conversation/{node_id}")
     async def mesh_conversation(
         node_id: str,
         limit: int = Query(50, ge=1, le=200),
@@ -140,6 +148,102 @@ def create_app(service: CommsBridgeService) -> FastAPI:
             "node": _node_to_dict(node),
             "messages": [_message_to_dict(m) for m in messages],
             "count": len(messages),
+        }
+
+    # --- Mesh Contacts/Favorites Endpoints ---
+
+    @app.get("/api/mesh/contacts")
+    async def get_contacts() -> dict[str, Any]:
+        """Get all mesh contacts."""
+        mesh = get_mesh_service()
+        contacts = await mesh.get_all_contacts()
+        return {"contacts": contacts, "count": len(contacts)}
+
+    @app.get("/api/mesh/contacts/favorites")
+    async def get_favorites() -> dict[str, Any]:
+        """Get favorite contacts only."""
+        mesh = get_mesh_service()
+        favorites = await mesh.get_favorite_contacts()
+        return {"favorites": favorites, "count": len(favorites)}
+
+    @app.get("/api/mesh/contacts/{node_id}")
+    async def get_contact(node_id: str) -> dict[str, Any]:
+        """Get contact info for a node."""
+        mesh = get_mesh_service()
+        contact = await mesh.get_contact(node_id)
+        if not contact:
+            # Return empty contact info if not found
+            return {
+                "contact": {
+                    "node_id": node_id,
+                    "alias": None,
+                    "notes": None,
+                    "is_favorite": False,
+                }
+            }
+        return {"contact": contact}
+
+    @app.post("/api/mesh/contacts/{node_id}/favorite")
+    async def toggle_favorite(node_id: str) -> dict[str, Any]:
+        """Toggle favorite status for a node."""
+        mesh = get_mesh_service()
+        new_state = await mesh.toggle_favorite(node_id)
+        return {"node_id": node_id, "is_favorite": new_state}
+
+    @app.put("/api/mesh/contacts/{node_id}")
+    async def update_contact(node_id: str, update: ContactUpdate) -> dict[str, Any]:
+        """Update contact alias or notes."""
+        mesh = get_mesh_service()
+
+        if update.alias is not None:
+            await mesh.set_contact_alias(node_id, update.alias)
+        if update.notes is not None:
+            await mesh.set_contact_notes(node_id, update.notes)
+
+        contact = await mesh.get_contact(node_id)
+        return {"contact": contact}
+
+    @app.delete("/api/mesh/contacts/{node_id}")
+    async def delete_contact(node_id: str) -> dict[str, Any]:
+        """Delete a contact."""
+        mesh = get_mesh_service()
+        deleted = await mesh.delete_contact(node_id)
+        return {"deleted": deleted, "node_id": node_id}
+
+    @app.get("/api/mesh/nodes/enriched")
+    async def get_nodes_with_contacts(
+        online_only: bool = Query(False),
+    ) -> dict[str, Any]:
+        """Get nodes with contact info merged."""
+        mesh = get_mesh_service()
+
+        if online_only:
+            nodes = mesh.get_online_nodes()
+        else:
+            nodes = mesh.get_nodes()
+
+        # Merge contact info
+        enriched = []
+        for node in nodes:
+            node_dict = _node_to_dict(node)
+            contact = await mesh.get_contact(node.node_id)
+            if contact:
+                node_dict["is_favorite"] = bool(contact.get("is_favorite"))
+                node_dict["alias"] = contact.get("alias")
+                node_dict["notes"] = contact.get("notes")
+            else:
+                node_dict["is_favorite"] = False
+                node_dict["alias"] = None
+                node_dict["notes"] = None
+            enriched.append(node_dict)
+
+        # Sort: favorites first, then by name
+        enriched.sort(key=lambda n: (not n["is_favorite"], n["short_name"]))
+
+        return {
+            "nodes": enriched,
+            "count": len(enriched),
+            "my_node": _node_to_dict(mesh.my_node_info),
         }
 
     return app

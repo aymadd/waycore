@@ -68,6 +68,8 @@ class MQTTBus(MessageBus):
         result, mid = self._client.subscribe(topic, qos=qos)
         if result != 0:
             raise RuntimeError(f"Subscribe failed (rc={result})")
+        if mid is None:
+            raise RuntimeError("Subscribe returned no message ID")
         with self._lock:
             self._subs[mid] = _Subscription(topic=topic, qos=qos, handler=handler)
 

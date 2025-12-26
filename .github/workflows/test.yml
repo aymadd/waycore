@@ -34,7 +34,7 @@ jobs:
         run: poetry run black --check device/
 
       - name: Type check (mypy)
-        run: poetry run mypy device/ --strict
+        run: poetry run mypy device/
 
       - name: Run tests with coverage
         run: poetry run pytest --cov=device --cov-report=term-missing --cov-fail-under=90

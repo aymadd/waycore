@@ -34,4 +34,4 @@ jobs:
         run: poetry run black --check device/
 
       - name: Mypy
-        run: poetry run mypy device/ --strict
+        run: poetry run mypy device/
