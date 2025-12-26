@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +70,24 @@ def create_mock_module_manager_service() -> Any:
     return service
 
 
+def create_mock_camera_service() -> Any:
+    """Create a mock CameraService for API generation."""
+    from unittest.mock import MagicMock
+
+    service = MagicMock()
+    service.is_healthy.return_value = True
+    service.get_camera_status.return_value = {"state": "ready", "is_ready": True}
+    service.get_camera_settings.return_value = {
+        "resolution_width": 1280,
+        "resolution_height": 720,
+        "is_front_camera": False,
+        "available_resolutions": [(640, 480), (1280, 720), (1920, 1080)],
+    }
+    service.list_photos.return_value = []
+    service.get_photo_filepath.return_value = None
+    return service
+
+
 # Service configuration: (module_path, create_app_function, mock_factory, output_name, port)
 SERVICES = [
     (
@@ -108,6 +125,13 @@ SERVICES = [
         "module-manager",
         8005,
     ),
+    (
+        "device.services.camera_service.api",
+        "create_app",
+        create_mock_camera_service,
+        "camera-service",
+        8006,
+    ),
 ]
 
 
@@ -140,9 +164,8 @@ def generate_openapi_spec(
 
         # Add metadata
         openapi_schema["info"]["version"] = "0.1.0"
-        openapi_schema["info"]["description"] = (
-            f"API specification for the Waycore {service_name} service."
-        )
+        desc = f"API specification for the Waycore {service_name} service."
+        openapi_schema["info"]["description"] = desc
 
         return openapi_schema
 
@@ -161,13 +184,12 @@ def save_spec(spec: dict[str, Any], output_path: Path) -> None:
 
 def generate_readme(services: list[tuple[str, int, Path]], docs_dir: Path) -> None:
     """Generate README with links to all API specs."""
-    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    # Note: Removed dynamic timestamp to avoid pre-commit loop
+    # The git commit history shows when this was last updated
 
-    readme_content = f"""# Waycore API Documentation
+    readme_content = """# Waycore API Documentation
 
 Auto-generated OpenAPI specifications for all Waycore services.
-
-**Last updated:** {generated_at}
 
 ## Services
 

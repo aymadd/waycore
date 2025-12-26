@@ -16,3 +16,6 @@ MeshChat 1.0 MeshChat.qml
 MeshConversation 1.0 MeshConversation.qml
 MeshNodes 1.0 MeshNodes.qml
 MeshNodeDetails 1.0 MeshNodeDetails.qml
+Camera 1.0 Camera.qml
+Gallery 1.0 Gallery.qml
+PhotoViewer 1.0 PhotoViewer.qml

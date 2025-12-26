@@ -83,11 +83,26 @@ Item {
 			App.MeshNodeDetails {}
 		}
 
-		Component {
-			id: meshConversationComponent
-			App.MeshConversation {}
-		}
+	Component {
+		id: meshConversationComponent
+		App.MeshConversation {}
 	}
+
+	Component {
+		id: cameraComponent
+		App.Camera {}
+	}
+
+	Component {
+		id: galleryComponent
+		App.Gallery {}
+	}
+
+	Component {
+		id: photoViewerComponent
+		App.PhotoViewer {}
+	}
+}
 
 	function navigateTo(appName) {
 		console.log("Navigate to:", appName)
@@ -113,15 +128,21 @@ Item {
 			case "Notes":
 				router.push(notesListComponent)
 				break
-			case "Meshtastic":
-				router.push(meshChatComponent)
-				break
-			case "MeshNodes":
-				router.push(meshNodesComponent)
-				break
-			default:
-				console.log("App not yet implemented:", appName)
-		}
+		case "Meshtastic":
+			router.push(meshChatComponent)
+			break
+		case "MeshNodes":
+			router.push(meshNodesComponent)
+			break
+		case "Camera":
+			router.push(cameraComponent)
+			break
+		case "Gallery":
+			router.push(galleryComponent)
+			break
+		default:
+			console.log("App not yet implemented:", appName)
+	}
 	}
 
 	function openNoteEditor(noteId) {
@@ -134,10 +155,15 @@ Item {
 		router.push(details)
 	}
 
-	function openConversation(nodeId) {
-		var conversation = meshConversationComponent.createObject(null, {node_id: nodeId})
-		router.push(conversation)
-	}
+function openConversation(nodeId) {
+	var conversation = meshConversationComponent.createObject(null, {node_id: nodeId})
+	router.push(conversation)
+}
+
+function openPhotoViewer(photoId, photoIndex) {
+	var viewer = photoViewerComponent.createObject(null, {photoId: photoId, photoIndex: photoIndex || 0})
+	router.push(viewer)
+}
 
 	function navigateToSettings() {
 		navigateTo("Settings")

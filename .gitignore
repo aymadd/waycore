@@ -38,3 +38,6 @@ progress/**/__pycache__/
 progress/**/.cache/
 
 /local_plan
+
+# Runtime data directories (Docker volumes handle this)
+/data/

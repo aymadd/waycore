@@ -373,10 +373,12 @@ class SensorBridge(QObject):
         - Core daemon: sensor states
         - Data logger: notes, events, sensors, AI inferences, preferences
         - Comms bridge: mesh contacts and messages
+        - Camera service: all photos
 
         Returns True if all resets successful.
         """
         from .api_client import CommsBridgeClient, DataLoggerClient
+        from .camera_bridge import CameraServiceClient
 
         success = True
 
@@ -405,6 +407,15 @@ class SensorBridge(QObject):
             logger.info("Comms bridge factory reset complete")
         except Exception as e:
             logger.error(f"Comms bridge factory reset failed: {e}")
+            success = False
+
+        # Reset camera service (all photos)
+        try:
+            camera_client = CameraServiceClient()
+            camera_client.factory_reset()
+            logger.info("Camera service factory reset complete")
+        except Exception as e:
+            logger.error(f"Camera service factory reset failed: {e}")
             success = False
 
         return success

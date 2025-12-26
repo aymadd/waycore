@@ -1,0 +1,12 @@
+mqtt_broker_url: "mqtt://mqtt:1883"
+port: 8006
+
+camera:
+  driver: mock
+  photos_dir: /app/data/photos
+  default_resolution:
+    width: 1280
+    height: 720
+  watermark: true
+
+idle_sleep_seconds: 0.05

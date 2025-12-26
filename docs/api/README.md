@@ -2,8 +2,6 @@
 
 Auto-generated OpenAPI specifications for all Waycore services.
 
-**Last updated:** 2025-12-26 02:45:08 UTC
-
 ## Services
 
 | Service | Port | OpenAPI Spec |
@@ -13,6 +11,7 @@ Auto-generated OpenAPI specifications for all Waycore services.
 | data-logger | 8002 | [data-logger.openapi.json](./data-logger.openapi.json) |
 | ai-service | 8004 | [ai-service.openapi.json](./ai-service.openapi.json) |
 | module-manager | 8005 | [module-manager.openapi.json](./module-manager.openapi.json) |
+| camera-service | 8006 | [camera-service.openapi.json](./camera-service.openapi.json) |
 
 ## Usage
 

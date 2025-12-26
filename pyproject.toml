@@ -20,6 +20,7 @@ httpx = "^0.27"
 PyYAML = "^6.0"
 typing-extensions = "^4.12"
 requests-unixsocket = "^0.3.0"
+Pillow = "^11.0"
 
 # UI dependencies (not installed in Docker - use: poetry install --with ui)
 [tool.poetry.group.ui]

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
+from .interfaces.camera import ICamera
 from .interfaces.gps import IGPS
 from .interfaces.module_port import IModulePort
 from .interfaces.power import IPowerController
@@ -22,6 +23,7 @@ class DriverFactory:
     Concrete drivers should register themselves at import time.
     """
 
+    _camera_creators: MutableMapping[str, Creator[ICamera]] = {}
     _gps_creators: MutableMapping[str, Creator[IGPS]] = {}
     _radio_creators: MutableMapping[str, Creator[IRadio]] = {}
     _sensor_creators: MutableMapping[str, Creator[ISensor]] = {}
@@ -30,6 +32,10 @@ class DriverFactory:
     _mesh_network_creators: MutableMapping[str, Creator[IMeshNetwork]] = {}
 
     # Registration
+    @classmethod
+    def register_camera(cls, name: str, creator: Creator[ICamera]) -> None:
+        cls._camera_creators[name] = creator
+
     @classmethod
     def register_gps(cls, name: str, creator: Creator[IGPS]) -> None:
         cls._gps_creators[name] = creator
@@ -55,6 +61,10 @@ class DriverFactory:
         cls._mesh_network_creators[name] = creator
 
     # Creation
+    @classmethod
+    def create_camera(cls, name: str, config: Mapping[str, Any] | None = None) -> ICamera:
+        return cls._create(cls._camera_creators, name, config)
+
     @classmethod
     def create_gps(cls, name: str, config: Mapping[str, Any] | None = None) -> IGPS:
         return cls._create(cls._gps_creators, name, config)

@@ -224,6 +224,341 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "camera_service_CameraSettingsResponse": {
+        "description": "Camera settings response.",
+        "properties": {
+          "available_resolutions": {
+            "description": "List of supported resolutions",
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Available Resolutions",
+            "type": "array"
+          },
+          "is_front_camera": {
+            "description": "Whether front camera is active",
+            "title": "Is Front Camera",
+            "type": "boolean"
+          },
+          "resolution_height": {
+            "description": "Current image height in pixels",
+            "title": "Resolution Height",
+            "type": "integer"
+          },
+          "resolution_width": {
+            "description": "Current image width in pixels",
+            "title": "Resolution Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "resolution_width",
+          "resolution_height",
+          "is_front_camera",
+          "available_resolutions"
+        ],
+        "title": "CameraSettingsResponse",
+        "type": "object"
+      },
+      "camera_service_CameraSettingsUpdate": {
+        "description": "Request body for updating camera settings.",
+        "properties": {
+          "resolution_height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Image height in pixels",
+            "title": "Resolution Height"
+          },
+          "resolution_width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Image width in pixels",
+            "title": "Resolution Width"
+          },
+          "use_front_camera": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Switch to front camera",
+            "title": "Use Front Camera"
+          }
+        },
+        "title": "CameraSettingsUpdate",
+        "type": "object"
+      },
+      "camera_service_CameraStateEnum": {
+        "description": "Camera operational states.",
+        "enum": [
+          "uninitialized",
+          "ready",
+          "capturing",
+          "error"
+        ],
+        "title": "CameraStateEnum",
+        "type": "string"
+      },
+      "camera_service_CameraStatusResponse": {
+        "description": "Camera status response.",
+        "properties": {
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error message if any",
+            "title": "Error Message"
+          },
+          "is_front_camera": {
+            "description": "Whether front camera is active",
+            "title": "Is Front Camera",
+            "type": "boolean"
+          },
+          "is_ready": {
+            "description": "Whether camera is ready for capture",
+            "title": "Is Ready",
+            "type": "boolean"
+          },
+          "resolution": {
+            "description": "Current resolution (width, height)",
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Resolution",
+            "type": "array"
+          },
+          "state": {
+            "$ref": "#/components/schemas/CameraStateEnum",
+            "description": "Current camera state"
+          }
+        },
+        "required": [
+          "state",
+          "is_ready",
+          "resolution",
+          "is_front_camera"
+        ],
+        "title": "CameraStatusResponse",
+        "type": "object"
+      },
+      "camera_service_CaptureResponse": {
+        "description": "Response from photo capture.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error message if failed",
+            "title": "Error"
+          },
+          "photo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PhotoMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Photo metadata if successful"
+          },
+          "success": {
+            "description": "Whether capture was successful",
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "CaptureResponse",
+        "type": "object"
+      },
+      "camera_service_DeletePhotoResponse": {
+        "description": "Response for photo deletion.",
+        "properties": {
+          "id": {
+            "description": "ID of deleted photo",
+            "title": "Id",
+            "type": "string"
+          },
+          "success": {
+            "description": "Whether deletion was successful",
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "id"
+        ],
+        "title": "DeletePhotoResponse",
+        "type": "object"
+      },
+      "camera_service_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "camera_service_PhotoListResponse": {
+        "description": "Response for photo listing.",
+        "properties": {
+          "photos": {
+            "description": "List of photos",
+            "items": {
+              "$ref": "#/components/schemas/PhotoMetadata"
+            },
+            "title": "Photos",
+            "type": "array"
+          },
+          "total": {
+            "description": "Total number of photos",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "photos",
+          "total"
+        ],
+        "title": "PhotoListResponse",
+        "type": "object"
+      },
+      "camera_service_PhotoMetadata": {
+        "description": "Photo metadata.",
+        "properties": {
+          "filename": {
+            "description": "Original filename",
+            "title": "Filename",
+            "type": "string"
+          },
+          "filepath": {
+            "description": "Full path to file",
+            "title": "Filepath",
+            "type": "string"
+          },
+          "height": {
+            "description": "Image height in pixels",
+            "title": "Height",
+            "type": "integer"
+          },
+          "id": {
+            "description": "Unique photo identifier (filename without extension)",
+            "title": "Id",
+            "type": "string"
+          },
+          "size_bytes": {
+            "description": "File size in bytes",
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "timestamp": {
+            "description": "When photo was taken",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "width": {
+            "description": "Image width in pixels",
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "filepath",
+          "timestamp",
+          "width",
+          "height",
+          "size_bytes"
+        ],
+        "title": "PhotoMetadata",
+        "type": "object"
+      },
+      "camera_service_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
       "comms_bridge_ContactUpdate": {
         "description": "Request body for updating contact info.",
         "properties": {
@@ -950,6 +1285,112 @@
         "summary": "Ai Latest",
         "tags": [
           "data-logger"
+        ]
+      }
+    },
+    "/api/camera/capture": {
+      "post": {
+        "description": "Capture a photo.",
+        "operationId": "capture_photo_api_camera_capture_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Capture Photo",
+        "tags": [
+          "camera-service"
+        ]
+      }
+    },
+    "/api/camera/settings": {
+      "get": {
+        "description": "Get current camera settings.",
+        "operationId": "get_camera_settings_api_camera_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Camera Settings",
+        "tags": [
+          "camera-service"
+        ]
+      },
+      "put": {
+        "description": "Update camera settings.",
+        "operationId": "update_camera_settings_api_camera_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CameraSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Camera Settings",
+        "tags": [
+          "camera-service"
+        ]
+      }
+    },
+    "/api/camera/status": {
+      "get": {
+        "description": "Get current camera status.",
+        "operationId": "get_camera_status_api_camera_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Camera Status",
+        "tags": [
+          "camera-service"
         ]
       }
     },
@@ -2057,6 +2498,153 @@
         ]
       }
     },
+    "/api/photos": {
+      "get": {
+        "description": "List all photos.",
+        "operationId": "list_photos_api_photos_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Photos",
+        "tags": [
+          "camera-service"
+        ]
+      }
+    },
+    "/api/photos/{photo_id}": {
+      "delete": {
+        "description": "Delete a photo by ID.",
+        "operationId": "delete_photo_api_photos__photo_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "photo_id",
+            "required": true,
+            "schema": {
+              "title": "Photo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePhotoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Photo",
+        "tags": [
+          "camera-service"
+        ]
+      },
+      "get": {
+        "description": "Get photo metadata by ID.",
+        "operationId": "get_photo_api_photos__photo_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "photo_id",
+            "required": true,
+            "schema": {
+              "title": "Photo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoMetadata"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Photo",
+        "tags": [
+          "camera-service"
+        ]
+      }
+    },
+    "/api/photos/{photo_id}/file": {
+      "get": {
+        "description": "Get photo file by ID.",
+        "operationId": "get_photo_file_api_photos__photo_id__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "photo_id",
+            "required": true,
+            "schema": {
+              "title": "Photo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Photo File",
+        "tags": [
+          "camera-service"
+        ]
+      }
+    },
     "/api/preferences": {
       "get": {
         "description": "Get all user preferences.",
@@ -2712,6 +3300,7 @@
     },
     "/health": {
       "get": {
+        "description": "Health check endpoint.",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -2729,7 +3318,7 @@
         },
         "summary": "Health",
         "tags": [
-          "module-manager"
+          "camera-service"
         ]
       }
     }

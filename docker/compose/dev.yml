@@ -98,6 +98,24 @@ services:
     volumes:
       - waycore-sockets:/tmp/waycore
 
+  camera-service:
+    build:
+      context: ../..
+      dockerfile: device/services/camera_service/Dockerfile
+    container_name: waycore-camera-service
+    environment:
+      - CAMERA_SERVICE_CONFIG=/app/device/services/camera_service/config/default.yaml
+      - USE_UNIX_SOCKET=false  # Use HTTP for local dev (UI runs outside Docker)
+    ports:
+      - "8006:8006"
+    depends_on:
+      - mqtt
+    networks:
+      - waycore-dev
+    volumes:
+      - waycore-sockets:/tmp/waycore
+      - waycore-photos:/app/data/photos
+
   # Web-based SQLite database viewer (shows all domain databases)
   db-viewer:
     image: datasetteproject/datasette:latest
@@ -128,3 +146,4 @@ networks:
 volumes:
   waycore-sockets:
   waycore-data:
+  waycore-photos:
