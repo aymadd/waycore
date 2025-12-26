@@ -125,11 +125,6 @@ ruff check path/to/code/
 - [ ] Documentation updated
 - [ ] Files committed
 
-## Time Tracking
-
-- Estimated effort: {hours}
-- Actual effort: {hours}
-
 ## Blockers
 
 {None or describe blockers}
@@ -520,11 +515,6 @@ tree -L 3 device/
 - [ ] Linting passing (N/A for this task)
 - [ ] Documentation updated
 - [ ] Files committed
-
-## Time Tracking
-
-- Estimated effort: 0.5 hours
-- Actual effort: {to be filled}
 
 ## Blockers
 

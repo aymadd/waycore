@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from .interfaces.gps import IGPS
 from .interfaces.module_port import IModulePort
 from .interfaces.power import IPowerController
 from .interfaces.radio import IRadio
 from .interfaces.sensor import ISensor
+
+if TYPE_CHECKING:
+    from .interfaces.mesh_network import IMeshNetwork
 
 T = TypeVar("T")
 Creator = Callable[[Mapping[str, Any]], T]
@@ -24,6 +27,7 @@ class DriverFactory:
     _sensor_creators: MutableMapping[str, Creator[ISensor]] = {}
     _module_port_creators: MutableMapping[str, Creator[IModulePort]] = {}
     _power_creators: MutableMapping[str, Creator[IPowerController]] = {}
+    _mesh_network_creators: MutableMapping[str, Creator[IMeshNetwork]] = {}
 
     # Registration
     @classmethod
@@ -46,6 +50,10 @@ class DriverFactory:
     def register_power(cls, name: str, creator: Creator[IPowerController]) -> None:
         cls._power_creators[name] = creator
 
+    @classmethod
+    def register_mesh_network(cls, name: str, creator: Creator[IMeshNetwork]) -> None:
+        cls._mesh_network_creators[name] = creator
+
     # Creation
     @classmethod
     def create_gps(cls, name: str, config: Mapping[str, Any] | None = None) -> IGPS:
@@ -66,6 +74,12 @@ class DriverFactory:
     @classmethod
     def create_power(cls, name: str, config: Mapping[str, Any] | None = None) -> IPowerController:
         return cls._create(cls._power_creators, name, config)
+
+    @classmethod
+    def create_mesh_network(
+        cls, name: str, config: Mapping[str, Any] | None = None
+    ) -> IMeshNetwork:
+        return cls._create(cls._mesh_network_creators, name, config)
 
     @staticmethod
     def _create(

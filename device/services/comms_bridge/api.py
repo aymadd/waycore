@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from device.libs.schemas.comms import SendMessageRequest
-from fastapi import FastAPI, HTTPException
+from device.libs.schemas.meshtastic import MeshMessageCreate
+from fastapi import FastAPI, HTTPException, Query
 
+from .mesh.service import get_mesh_service
 from .service import CommsBridgeService
 
 
@@ -33,4 +36,157 @@ def create_app(service: CommsBridgeService) -> FastAPI:
         )
         return {"success": ok}
 
+    # --- Mesh Chat Endpoints ---
+
+    @app.get("/api/mesh/status")  # type: ignore[misc]
+    async def mesh_status() -> dict[str, Any]:
+        """Get mesh network status."""
+        mesh = get_mesh_service()
+        return mesh.get_status()
+
+    @app.get("/api/mesh/nodes")  # type: ignore[misc]
+    async def mesh_nodes(
+        online_only: bool = Query(False, description="Only return online nodes"),
+    ) -> dict[str, Any]:
+        """Get list of mesh nodes."""
+        mesh = get_mesh_service()
+
+        if online_only:
+            nodes = mesh.get_online_nodes()
+        else:
+            nodes = mesh.get_nodes()
+
+        return {
+            "nodes": [_node_to_dict(n) for n in nodes],
+            "count": len(nodes),
+            "my_node": _node_to_dict(mesh.my_node_info),
+        }
+
+    @app.get("/api/mesh/nodes/{node_id}")  # type: ignore[misc]
+    async def mesh_node(node_id: str) -> dict[str, Any]:
+        """Get a specific mesh node."""
+        mesh = get_mesh_service()
+        node = mesh.get_node(node_id)
+
+        if not node:
+            raise HTTPException(status_code=404, detail="Node not found")
+
+        return {"node": _node_to_dict(node)}
+
+    @app.get("/api/mesh/messages")  # type: ignore[misc]
+    async def mesh_messages(
+        limit: int = Query(100, ge=1, le=500, description="Max messages to return"),
+        since: str | None = Query(None, description="ISO timestamp to filter from"),
+        node_id: str | None = Query(None, description="Filter by node ID"),
+    ) -> dict[str, Any]:
+        """Get mesh message history."""
+        mesh = get_mesh_service()
+
+        since_dt = None
+        if since:
+            try:
+                since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=f"Invalid timestamp: {e}") from e
+
+        messages = mesh.get_messages(since=since_dt, limit=limit, node_id=node_id)
+
+        return {
+            "messages": [_message_to_dict(m) for m in messages],
+            "count": len(messages),
+        }
+
+    @app.get("/api/mesh/messages/{message_id}")  # type: ignore[misc]
+    async def mesh_message(message_id: str) -> dict[str, Any]:
+        """Get a specific message."""
+        mesh = get_mesh_service()
+        message = mesh.get_message(message_id)
+
+        if not message:
+            raise HTTPException(status_code=404, detail="Message not found")
+
+        return {"message": _message_to_dict(message)}
+
+    @app.post("/api/mesh/messages")  # type: ignore[misc]
+    async def send_mesh_message(req: MeshMessageCreate) -> dict[str, Any]:
+        """Send a mesh message."""
+        mesh = get_mesh_service()
+
+        if not mesh.is_connected:
+            raise HTTPException(status_code=503, detail="Mesh network not connected")
+
+        message = mesh.send_message(req)
+
+        return {
+            "success": True,
+            "message": _message_to_dict(message),
+        }
+
+    @app.get("/api/mesh/conversation/{node_id}")  # type: ignore[misc]
+    async def mesh_conversation(
+        node_id: str,
+        limit: int = Query(50, ge=1, le=200),
+    ) -> dict[str, Any]:
+        """Get conversation with a specific node."""
+        mesh = get_mesh_service()
+
+        node = mesh.get_node(node_id)
+        if not node:
+            raise HTTPException(status_code=404, detail="Node not found")
+
+        messages = mesh.get_conversation(node_id, limit=limit)
+
+        return {
+            "node": _node_to_dict(node),
+            "messages": [_message_to_dict(m) for m in messages],
+            "count": len(messages),
+        }
+
     return app
+
+
+# Helper functions for serialization
+
+
+def _node_to_dict(node: Any) -> dict[str, Any]:
+    """Convert MeshNode to dictionary."""
+    result = {
+        "node_id": node.node_id,
+        "short_name": node.short_name,
+        "long_name": node.long_name,
+        "hardware": node.hardware.value if hasattr(node.hardware, "value") else str(node.hardware),
+        "status": node.status.value if hasattr(node.status, "value") else str(node.status),
+        "last_seen": node.last_seen.isoformat() if node.last_seen else None,
+        "battery_level": node.battery_level,
+        "snr": node.snr,
+        "rssi": node.rssi,
+        "hops_away": node.hops_away,
+    }
+
+    if node.position:
+        result["position"] = {
+            "latitude": node.position.latitude,
+            "longitude": node.position.longitude,
+            "altitude": node.position.altitude,
+        }
+    else:
+        result["position"] = None
+
+    return result
+
+
+def _message_to_dict(message: Any) -> dict[str, Any]:
+    """Convert MeshMessage to dictionary."""
+    return {
+        "id": message.id,
+        "from_node": message.from_node,
+        "to_node": message.to_node,
+        "channel": message.channel,
+        "text": message.text,
+        "timestamp": message.timestamp.isoformat() if message.timestamp else None,
+        "rx_time": message.rx_time.isoformat() if message.rx_time else None,
+        "hop_count": message.hop_count,
+        "acknowledged": message.acknowledged,
+        "snr": message.snr,
+        "rssi": message.rssi,
+    }

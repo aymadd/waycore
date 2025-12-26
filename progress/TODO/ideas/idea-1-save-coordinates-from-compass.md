@@ -121,10 +121,7 @@ cd device/apps/ui && python main.py
 - [ ] Documentation updated
 - [ ] Files committed
 
-## Time Tracking
 
-- Estimated effort: 6-8 hours
-- Actual effort: {to be filled}
 
 ## Blockers
 

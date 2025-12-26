@@ -52,6 +52,7 @@ progress/
 - ❌ Mark tasks complete without running validation
 - ❌ Skip the IN_PROGRESS step when working on tasks
 - ❌ Use emoji status markers like `✅ DONE` (use `COMPLETED` text only)
+- ❌ Include time or effort estimates in task files (no "Estimated effort", "Time Tracking", or hour estimates)
 
 ### Task Status Values
 

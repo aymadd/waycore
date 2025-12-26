@@ -62,11 +62,6 @@ mypy device/ --strict
 - [ ] Documentation updated
 - [ ] Files committed
 
-## Time Tracking
-
-- Estimated effort: 1-4 hours
-- Actual effort:
-
 ## Blockers
 
 None

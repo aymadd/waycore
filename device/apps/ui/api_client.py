@@ -61,6 +61,9 @@ CORE_DAEMON_HTTP = os.getenv("CORE_DAEMON_URL", "http://localhost:8000")
 DATA_LOGGER_SOCKET = "/tmp/waycore/data-logger.sock"
 DATA_LOGGER_HTTP = os.getenv("DATA_LOGGER_URL", "http://localhost:8002")
 
+COMMS_BRIDGE_SOCKET = "/tmp/waycore/comms-bridge.sock"
+COMMS_BRIDGE_HTTP = os.getenv("COMMS_BRIDGE_URL", "http://localhost:8001")
+
 
 class CoreDaemonClient(APIClient):
     """Client for Core Daemon service."""
@@ -168,3 +171,73 @@ class DataLoggerClient(APIClient):
     def factory_reset(self) -> dict[str, Any]:
         """Factory reset: clear all data."""
         return self.post("/api/factory-reset", json={})
+
+
+class CommsBridgeClient(APIClient):
+    """Client for Comms Bridge service (mesh networking)."""
+
+    def __init__(self) -> None:
+        super().__init__(COMMS_BRIDGE_SOCKET, COMMS_BRIDGE_HTTP)
+
+    # --- Mesh Status ---
+
+    def get_mesh_status(self) -> dict[str, Any]:
+        """Get mesh network status."""
+        return self.get("/api/mesh/status")
+
+    # --- Mesh Nodes ---
+
+    def get_mesh_nodes(self, online_only: bool = False) -> dict[str, Any]:
+        """Get list of mesh nodes."""
+        params = {"online_only": str(online_only).lower()}
+        return self.get("/api/mesh/nodes", params=params)
+
+    def get_mesh_node(self, node_id: str) -> dict[str, Any]:
+        """Get a specific mesh node."""
+        return self.get(f"/api/mesh/nodes/{node_id}")
+
+    # --- Mesh Messages ---
+
+    def get_mesh_messages(
+        self,
+        limit: int = 100,
+        since: str | None = None,
+        node_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Get mesh message history."""
+        params: dict[str, Any] = {"limit": limit}
+        if since:
+            params["since"] = since
+        if node_id:
+            params["node_id"] = node_id
+        return self.get("/api/mesh/messages", params=params)
+
+    def get_mesh_message(self, message_id: str) -> dict[str, Any]:
+        """Get a specific mesh message."""
+        return self.get(f"/api/mesh/messages/{message_id}")
+
+    def send_mesh_message(
+        self,
+        text: str,
+        to_node: str | None = None,
+        channel: int = 0,
+        want_ack: bool = True,
+    ) -> dict[str, Any]:
+        """Send a mesh message."""
+        return self.post(
+            "/api/mesh/messages",
+            json={
+                "text": text,
+                "to_node": to_node,
+                "channel": channel,
+                "want_ack": want_ack,
+            },
+        )
+
+    def get_mesh_conversation(
+        self,
+        node_id: str,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Get conversation with a specific node."""
+        return self.get(f"/api/mesh/conversation/{node_id}", params={"limit": limit})

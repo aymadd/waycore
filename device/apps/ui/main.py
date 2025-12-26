@@ -15,6 +15,7 @@ from PySide6.QtCore import QFileSystemWatcher, QObject, QUrl, Signal, Slot
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
+from .mesh_bridge import MeshBridge
 from .notes_bridge import NotesBridge
 from .sensor_bridge import SensorBridge
 
@@ -129,8 +130,10 @@ def main() -> int:
     # Create and register bridges for backend communication
     sensor_bridge = SensorBridge()
     notes_bridge = NotesBridge()
+    mesh_bridge = MeshBridge()
     engine.rootContext().setContextProperty("SensorBridge", sensor_bridge)
     engine.rootContext().setContextProperty("NotesBridge", notes_bridge)
+    engine.rootContext().setContextProperty("MeshBridge", mesh_bridge)
 
     # Get the QML directory path
     qml_dir = Path(__file__).parent / "qml"

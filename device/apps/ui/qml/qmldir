@@ -12,3 +12,5 @@ SettingsInfo 1.0 SettingsInfo.qml
 Compass 1.0 Compass.qml
 NotesList 1.0 NotesList.qml
 NoteEditor 1.0 NoteEditor.qml
+MeshChat 1.0 MeshChat.qml
+MeshNodes 1.0 MeshNodes.qml

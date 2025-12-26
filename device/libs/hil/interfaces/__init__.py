@@ -1,1 +1,3 @@
-__all__: list[str] = []
+from .mesh_network import IMeshNetwork
+
+__all__: list[str] = ["IMeshNetwork"]

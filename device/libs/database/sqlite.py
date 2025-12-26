@@ -150,6 +150,80 @@ class AsyncSQLite:
         )
         await self._conn.commit()
 
+    # --- Mesh Messages ---
+
+    async def save_mesh_message(
+        self,
+        message_id: str,
+        from_node: str,
+        to_node: str | None,
+        text: str,
+        channel: int = 0,
+        rssi: float | None = None,
+        snr: float | None = None,
+    ) -> None:
+        """Save a mesh network message."""
+        assert self._conn is not None
+        metadata = json.dumps({"message_id": message_id, "channel": channel})
+        await self._conn.execute(
+            """
+            INSERT INTO comms_messages
+            (transport, from_node, to_node, content, channel, rssi, snr, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "mesh",  # transport type
+                from_node,
+                to_node,
+                text,
+                str(channel),
+                rssi,
+                snr,
+                metadata,
+            ),
+        )
+        await self._conn.commit()
+
+    async def get_mesh_messages(
+        self,
+        limit: int = 100,
+        node_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Get mesh messages from database."""
+        assert self._conn is not None
+
+        if node_id:
+            cursor = await self._conn.execute(
+                """
+                SELECT * FROM comms_messages
+                WHERE transport = 'mesh' AND (from_node = ? OR to_node = ?)
+                ORDER BY id DESC LIMIT ?
+                """,
+                (node_id, node_id, limit),
+            )
+        else:
+            cursor = await self._conn.execute(
+                """
+                SELECT * FROM comms_messages
+                WHERE transport = 'mesh'
+                ORDER BY id DESC LIMIT ?
+                """,
+                (limit,),
+            )
+
+        assert cursor.description is not None
+        cols = [c[0] for c in cursor.description]
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return [dict(zip(cols, row)) for row in rows]
+
+    async def delete_mesh_messages(self) -> int:
+        """Delete all mesh messages (for factory reset)."""
+        assert self._conn is not None
+        cursor = await self._conn.execute("DELETE FROM comms_messages WHERE transport = 'mesh'")
+        await self._conn.commit()
+        return int(cursor.rowcount) if cursor.rowcount else 0
+
     async def fetch_latest(self, table: str, limit: int = 50) -> list[dict[str, Any]]:
         """
         Fetch latest rows from a supported table.

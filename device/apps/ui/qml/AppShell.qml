@@ -67,6 +67,16 @@ Item {
 			id: noteEditorComponent
 			App.NoteEditor {}
 		}
+
+		Component {
+			id: meshChatComponent
+			App.MeshChat {}
+		}
+
+		Component {
+			id: meshNodesComponent
+			App.MeshNodes {}
+		}
 	}
 
 	function navigateTo(appName) {
@@ -92,6 +102,12 @@ Item {
 				break
 			case "Notes":
 				router.push(notesListComponent)
+				break
+			case "Meshtastic":
+				router.push(meshChatComponent)
+				break
+			case "MeshNodes":
+				router.push(meshNodesComponent)
 				break
 			default:
 				console.log("App not yet implemented:", appName)

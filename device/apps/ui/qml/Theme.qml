@@ -13,6 +13,9 @@ QtObject {
 	readonly property color secondaryDark: "#5C7A65"
 	readonly property color secondaryLight: "#9CB5A3"
 
+	// Accent Color (for highlights)
+	readonly property color accent: "#7A9984"
+
 	// Semantic Colors
 	readonly property color success: "#6B9B6F"
 	readonly property color warning: "#D4A574"
