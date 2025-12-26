@@ -239,6 +239,11 @@ Rectangle {
 			UI.Card {
 				Layout.fillWidth: true
 
+				// Refresh storage on load
+				Component.onCompleted: {
+					if (SensorBridge) SensorBridge.refreshStorage()
+				}
+
 				Text { text: "Storage"; color: App.Theme.textPrimary; font.pixelSize: App.Theme.h2Size }
 
 				// Storage bar visualization
@@ -250,10 +255,12 @@ Rectangle {
 					border.color: App.Theme.divider
 
 					Rectangle {
-						width: parent.width * 0.35  // Mock: 35% used
+						width: parent.width * (SensorBridge ? SensorBridge.storageUsedPercent / 100 : 0.35)
 						height: parent.height
 						radius: 4
-						color: App.Theme.primary
+						color: (SensorBridge && SensorBridge.storageUsedPercent > 90) ? App.Theme.error :
+							   (SensorBridge && SensorBridge.storageUsedPercent > 75) ? App.Theme.warning :
+							   App.Theme.primary
 					}
 				}
 
@@ -263,19 +270,62 @@ Rectangle {
 					rowSpacing: App.Theme.spacingExtraSmall
 
 					Text { text: "Total"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.captionSize }
-					Text { text: "32 GB"; color: App.Theme.textPrimary; font.pixelSize: App.Theme.captionSize }
+					Text {
+						text: SensorBridge ? SensorBridge.storageTotalGb.toFixed(1) + " GB" : "32 GB"
+						color: App.Theme.textPrimary
+						font.pixelSize: App.Theme.captionSize
+					}
 
 					Text { text: "Used"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.captionSize }
-					Text { text: "11.2 GB (35%)"; color: App.Theme.textPrimary; font.pixelSize: App.Theme.captionSize }
+					Text {
+						text: SensorBridge ?
+							SensorBridge.storageUsedGb.toFixed(1) + " GB (" + SensorBridge.storageUsedPercent.toFixed(0) + "%)" :
+							"-- GB"
+						color: App.Theme.textPrimary
+						font.pixelSize: App.Theme.captionSize
+					}
 
 					Text { text: "Available"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.captionSize }
-					Text { text: "20.8 GB"; color: App.Theme.success; font.pixelSize: App.Theme.captionSize }
+					Text {
+						text: SensorBridge ? SensorBridge.storageAvailableGb.toFixed(1) + " GB" : "-- GB"
+						color: App.Theme.success
+						font.pixelSize: App.Theme.captionSize
+					}
+
+					// Breakdown section
+					Text { text: ""; Layout.columnSpan: 2 }  // Spacer
+
+					Text { text: "System"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.captionSize }
+					Text {
+						text: SensorBridge && SensorBridge.storageBreakdown.system ?
+							SensorBridge.storageBreakdown.system.human : "~2 GB"
+						color: App.Theme.textPrimary
+						font.pixelSize: App.Theme.captionSize
+					}
+
+					Text { text: "Apps"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.captionSize }
+					Text {
+						text: SensorBridge && SensorBridge.storageBreakdown.apps ?
+							SensorBridge.storageBreakdown.apps.human : "~500 MB"
+						color: App.Theme.textPrimary
+						font.pixelSize: App.Theme.captionSize
+					}
+
+					Text { text: "Data"; color: App.Theme.textSecondary; font.pixelSize: App.Theme.captionSize }
+					Text {
+						text: SensorBridge && SensorBridge.storageBreakdown.data ?
+							SensorBridge.storageBreakdown.data.human : "calculating..."
+						color: App.Theme.textPrimary
+						font.pixelSize: App.Theme.captionSize
+					}
 				}
 
 				Button {
-					text: "Clear Cache"
+					text: "Refresh Storage Info"
 					width: parent.width
-					onClicked: console.log("Clear cache tapped")
+					onClicked: {
+						if (SensorBridge) SensorBridge.refreshStorage()
+					}
 				}
 			}
 

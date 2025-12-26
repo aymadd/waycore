@@ -33,6 +33,7 @@ class SensorBridge(QObject):
     systemInfoChanged = Signal()
     compassChanged = Signal()
     sensorsChanged = Signal()
+    storageChanged = Signal()
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -74,6 +75,13 @@ class SensorBridge(QObject):
 
         # Sensor registry (list of discovered sensors)
         self._sensors: list[dict] = []
+
+        # Storage info
+        self._storage_total_gb = 32.0
+        self._storage_used_gb = 0.0
+        self._storage_available_gb = 32.0
+        self._storage_used_percent = 0.0
+        self._storage_breakdown: dict = {}
 
         # Update timer
         self._timer = QTimer(self)
@@ -513,3 +521,57 @@ class SensorBridge(QObject):
             },
         ]
         self.sensorsChanged.emit()
+
+    # --- Storage ---
+
+    @Property(float, notify=storageChanged)  # type: ignore[arg-type]
+    def storageTotalGb(self) -> float:
+        return self._storage_total_gb
+
+    @Property(float, notify=storageChanged)  # type: ignore[arg-type]
+    def storageUsedGb(self) -> float:
+        return self._storage_used_gb
+
+    @Property(float, notify=storageChanged)  # type: ignore[arg-type]
+    def storageAvailableGb(self) -> float:
+        return self._storage_available_gb
+
+    @Property(float, notify=storageChanged)  # type: ignore[arg-type]
+    def storageUsedPercent(self) -> float:
+        return self._storage_used_percent
+
+    @Property("QVariant", notify=storageChanged)  # type: ignore[arg-type]
+    def storageBreakdown(self) -> dict:
+        return self._storage_breakdown
+
+    @Slot()  # type: ignore[arg-type]
+    def refreshStorage(self) -> None:
+        """Refresh storage information from backend."""
+        if self._client and self._connected:
+            try:
+                data = self._client.get_storage_status()
+                self._storage_total_gb = data["total_bytes"] / (1024**3)
+                self._storage_used_gb = data["used_bytes"] / (1024**3)
+                self._storage_available_gb = data["available_bytes"] / (1024**3)
+                self._storage_used_percent = data["used_percent"]
+                self._storage_breakdown = data.get("breakdown", {})
+                self.storageChanged.emit()
+                logger.debug("Storage info refreshed from backend")
+            except Exception as e:
+                logger.error(f"Failed to get storage status: {e}")
+                self._use_mock_storage()
+        else:
+            self._use_mock_storage()
+
+    def _use_mock_storage(self) -> None:
+        """Use mock storage data when backend is unavailable."""
+        self._storage_total_gb = 32.0
+        self._storage_used_gb = 11.2
+        self._storage_available_gb = 20.8
+        self._storage_used_percent = 35.0
+        self._storage_breakdown = {
+            "system": {"bytes": 2 * 1024**3, "human": "2.0 GB"},
+            "apps": {"bytes": 500 * 1024**2, "human": "500 MB"},
+            "data": {"bytes": 200 * 1024**2, "human": "200 MB"},
+        }
+        self.storageChanged.emit()

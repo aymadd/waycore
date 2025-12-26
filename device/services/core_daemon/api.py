@@ -307,6 +307,107 @@ def create_app(service: CoreDaemonService) -> FastAPI:
             "message": "Factory reset complete. All data cleared.",
         }
 
+    # --- Storage Status ---
+
+    @app.get("/api/system/storage")  # type: ignore[misc]
+    async def get_storage_status() -> dict[str, Any]:
+        """
+        Get storage usage information.
+
+        Returns breakdown of storage by category:
+        - total_bytes: Total storage capacity (mocked for dev)
+        - system_bytes: OS and system files (mocked)
+        - apps_bytes: Application installation size (mocked)
+        - data_bytes: User data (calculated from actual files)
+        - available_bytes: Free space
+        """
+        from pathlib import Path
+
+        # Mock total capacity (32GB eMMC typical for Raspberry Pi)
+        # In production, use: shutil.disk_usage("/").total
+        total_bytes = 32 * 1024 * 1024 * 1024  # 32 GB
+
+        # Mock system/OS size (typical Raspberry Pi OS Lite ~2GB)
+        system_bytes = 2 * 1024 * 1024 * 1024  # 2 GB
+
+        # Mock application installation size (~500MB)
+        apps_bytes = 500 * 1024 * 1024  # 500 MB
+
+        # Calculate actual data usage from data directories
+        data_bytes = 0
+        data_breakdown: dict[str, int] = {}
+
+        # Check common data directories
+        data_dirs = [
+            ("database", Path("/app/data") if Path("/app/data").exists() else Path("data")),
+            ("logs", Path("/app/logs") if Path("/app/logs").exists() else Path("logs")),
+            ("media", Path("/app/media") if Path("/app/media").exists() else Path("media")),
+            ("cache", Path("/app/cache") if Path("/app/cache").exists() else Path("cache")),
+        ]
+
+        for name, dir_path in data_dirs:
+            dir_size = 0
+            if dir_path.exists():
+                for f in dir_path.rglob("*"):
+                    if f.is_file():
+                        try:
+                            dir_size += f.stat().st_size
+                        except (OSError, PermissionError):
+                            pass
+            data_breakdown[name] = dir_size
+            data_bytes += dir_size
+
+        # Calculate available space
+        available_bytes = total_bytes - system_bytes - apps_bytes - data_bytes
+        if available_bytes < 0:
+            available_bytes = 0
+
+        # Calculate percentages
+        used_bytes = system_bytes + apps_bytes + data_bytes
+        used_percent = (used_bytes / total_bytes) * 100 if total_bytes > 0 else 0
+
+        return {
+            "total_bytes": total_bytes,
+            "total_human": _format_bytes(total_bytes),
+            "used_bytes": used_bytes,
+            "used_human": _format_bytes(used_bytes),
+            "used_percent": round(used_percent, 1),
+            "available_bytes": available_bytes,
+            "available_human": _format_bytes(available_bytes),
+            "breakdown": {
+                "system": {
+                    "bytes": system_bytes,
+                    "human": _format_bytes(system_bytes),
+                    "description": "Operating system",
+                },
+                "apps": {
+                    "bytes": apps_bytes,
+                    "human": _format_bytes(apps_bytes),
+                    "description": "Installed applications",
+                },
+                "data": {
+                    "bytes": data_bytes,
+                    "human": _format_bytes(data_bytes),
+                    "description": "User data (notes, media, logs)",
+                    "details": {
+                        k: {"bytes": v, "human": _format_bytes(v)}
+                        for k, v in data_breakdown.items()
+                    },
+                },
+            },
+        }
+
+    def _format_bytes(size_bytes: int) -> str:
+        """Format bytes to human-readable string."""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
     # --- Sensor Registry ---
 
     @app.get("/api/sensors/registry")  # type: ignore[misc]

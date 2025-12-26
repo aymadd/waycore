@@ -96,6 +96,10 @@ class CoreDaemonClient(APIClient):
         """Trigger factory reset."""
         return self.post("/api/system/factory-reset", json={})
 
+    def get_storage_status(self) -> dict[str, Any]:
+        """Get storage usage information."""
+        return self.get("/api/system/storage")
+
     # --- Sensor Registry ---
 
     def get_all_sensors(self) -> list[dict[str, Any]]:

@@ -1,8 +1,12 @@
 # Architecture Overview
 
-This document provides a detailed overview of Waycore’s software architecture:
+This document provides a detailed overview of Waycore's software architecture:
 services, internal/external communications, third‑party dependencies, UI
 guidelines, standards, and extension points.
+
+> **Quick Links:** [Vision](../vision.md) • [Project Overview](../overview.md) •
+> [Development Setup](../local_dev_docker.md) •
+> [Progress](../../progress/SUMMARY.md)
 
 ## System goals
 
@@ -185,12 +189,30 @@ Notes:
 - Spacing scale: `4, 8, 16, 24`
 - Minimum touch target: `48`
 - Components live under `device/apps/ui/qml/components/`
-- Principles:
-  - Motion and rendering must not block IO; keep the UI reactive and
-    message‑driven
-  - Prefer large touch targets and high contrast for outdoors
-  - Keep critical system state (battery, radios, SOS) visible or one tap away
-  - Respect single source of truth from schemas for data shapes
+
+### Current UI Apps
+
+| App        | Description                                             | Status      |
+| ---------- | ------------------------------------------------------- | ----------- |
+| AI         | On-device inference (image classification, Q&A)         | Implemented |
+| Maps       | Offline mapping and navigation                          | Planned     |
+| Compass    | Heading, GPS coordinates, elevation                     | Implemented |
+| Meshtastic | LoRa mesh messaging                                     | Planned     |
+| Camera     | Photo capture with mock/real camera                     | Planned     |
+| Gallery    | Photo viewing and management                            | Planned     |
+| Notes      | Rich text note-taking                                   | Implemented |
+| Flashlight | Torch control                                           | Mocked      |
+| SOS        | Emergency distress signaling                            | Mocked      |
+| Modules    | External module management                              | Planned     |
+| Settings   | Device configuration (General, Controls, Sensors, Info) | Implemented |
+
+### UI Principles
+
+- Motion and rendering must not block IO; keep the UI reactive and
+  message‑driven
+- Prefer large touch targets and high contrast for outdoors
+- Keep critical system state (battery, radios, SOS) visible or one tap away
+- Respect single source of truth from schemas for data shapes
 
 ## Third‑party dependencies
 
@@ -271,8 +293,15 @@ AI (optional/planned by model choice):
 
 ## References
 
-- Repository layout and vision: `README.md`, `docs/overview.md`
-- Shared schemas: `device/libs/schemas/`
-- Services: `device/services/*`
-- UI: `device/apps/ui/`
-- Development with Docker: `docs/local_dev_docker.md`
+| Resource           | Path                                           |
+| ------------------ | ---------------------------------------------- |
+| Main README        | `README.md`                                    |
+| Vision Document    | `docs/vision.md`                               |
+| Project Overview   | `docs/overview.md`                             |
+| Shared Schemas     | `device/libs/schemas/`                         |
+| Services           | `device/services/`                             |
+| UI Application     | `device/apps/ui/`                              |
+| Mock Drivers       | `device/drivers/mock/`                         |
+| Docker Development | `docs/local_dev_docker.md`                     |
+| IPC Guide          | `local_plan/12-ipc-implementation-guide.md.md` |
+| Progress Tracking  | `progress/SUMMARY.md`                          |

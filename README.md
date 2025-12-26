@@ -1,220 +1,163 @@
 # Waycore
 
+<p align="center">
 <img src="assets/logo/waycore_logo_wbg.svg" alt="Waycore logo" width="200">
+</p>
 
-Modular, communications-first field computer designed for outdoors, EDC,
-survival, and trades/handyman use. The system separates a Linux SBC “main brain”
-(UI, AI, storage, networking) from a low-power ESP32-S3 sidecar (radios, GPS,
-SOS, power policy) to ensure reliability even when the UI is busy or rebooting.
+<p align="center">
+  <strong>Modular, communications-first field computer for the outdoors</strong>
+</p>
 
-For the high-level vision and scope, see: `docs/overview.md`
+<p align="center">
+  <a href="docs/vision.md">Vision</a> •
+  <a href="docs/overview.md">Overview</a> •
+  <a href="docs/architecture/architecture.md">Architecture</a> •
+  <a href="progress/SUMMARY.md">Progress</a> •
+  <a href="docs/local_dev_docker.md">Development</a> •
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
-For IPC strategy across services, see:
-`local_plan/12-ipc-implementation-guide.md.md`
+---
 
-For a detailed software architecture overview, see:
-`docs/architecture/architecture.md`
+## What is Waycore?
 
-## Highlights
+Waycore is a **modular, rugged, handheld field computer** designed for outdoors,
+EDC, survival, and trades/handyman use. The system uses a split-brain design: a
+Linux SBC "main brain" (UI, AI, storage, networking) paired with a low-power
+ESP32-S3 sidecar (radios, GPS, SOS, power policy) to ensure reliability even
+when the UI is busy or rebooting.
 
-- Communications-first and modular by design
-- On-device intelligence without cloud dependency
-- Reliable low-power controller for critical functions (e.g., SOS)
-- Developer-friendly with clear interfaces and mockable hardware
+### Key Principles
 
-## Repository Structure (MVP)
+- **Communications-first** — Works when phones and networks fail
+- **Modular by design** — Core device + expandable external modules
+- **On-device intelligence** — AI without cloud dependency
+- **Reliable & resilient** — SOS works even if the UI crashes
+- **Developer-friendly** — Clear interfaces and mockable hardware
 
-The repo is organized for a simulation-first workflow on a developer laptop
-using Docker Compose and mocked hardware. Key libraries and services delivered
-in Phases 0–6 are included.
+## Documentation
 
-```
-device/
-  libs/
-    schemas/                    # Pydantic message schemas (system, comms, sensor, module, ai)
-    hil/                        # Hardware interfaces (IGPS, IRadio, ISensor, IModulePort, IPowerController) + factory
-    messaging/                  # Message bus interface + MQTT implementation (paho-mqtt)
-    common/                     # BaseService lifecycle
-  apps/ui/                      # Qt/QML frontend (PySide6 backend) + Theme.qml design system
-  services/
-    core_daemon/                # State machine, power policy, service + FastAPI
-    module_manager/             # Module discovery/lifecycle service + FastAPI
-    ai_service/                 # On-device inference service (preproc, engine, REST, bus)
-    comms_bridge/               # Radio manager, TAK gateway stub, service + FastAPI
-    data_logger/                # Async SQLite logger + REST for latest records
-  drivers/
-    mock/                       # Mock GPS, LoRa radio, sensor, module_port, power (registered in factory)
-    real/                       # Real drivers (stubs added in later phases)
-  docker/
-    compose/dev.yml             # Development Docker Compose (mqtt, core-daemon, module-manager, comms-bridge)
-    mosquitto.conf              # MQTT broker dev config
-docs/
-progress/                       # File-based task tracking (TODO/IN_PROGRESS/COMPLETED/BLOCKED)
-LICENSE
-```
+| Document                                                  | Description                                                   |
+| --------------------------------------------------------- | ------------------------------------------------------------- |
+| [Vision](docs/vision.md)                                  | Full aspirational scope and long-term direction               |
+| [Overview](docs/overview.md)                              | Project scope, architecture decisions, and MVP definition     |
+| [Architecture](docs/architecture/architecture.md)         | Detailed software architecture, services, APIs, and standards |
+| [Progress](progress/SUMMARY.md)                           | Current implementation status and task tracking               |
+| [Local Development](docs/local_dev_docker.md)             | Docker-based development setup and workflows                  |
+| [IPC Guide](local_plan/12-ipc-implementation-guide.md.md) | Inter-process communication strategy                          |
 
-## Development Strategy (Simulation-First)
+## Quick Start
 
-Build Phase 1 targets a full software MVP without hardware:
+### Prerequisites
 
-- UI skeleton at fixed target resolution (e.g. 480×800)
-- Mock ESP32 + sensors
-- AI inference pipeline (on-demand)
-- Module protocol and discovery
+- Docker & Docker Compose
+- Python 3.11+
+- Poetry
 
-Later phases add bench hardware (Raspberry Pi 5, Meshtastic, camera/display),
-then custom PCB, and finally field testing.
-
-## Getting Started
-
-1. Read the architecture and scope in `docs/overview.md`.
-2. Explore the directory layout under `device/`.
-3. Review `CONTRIBUTING.md` for conventions and commit style.
-4. (Optional) Copy `device/docker/compose.sample.yml` to a local compose, and
-   iterate on service stubs as code is added.
-
-## Current Status (Phases 0–8)
-
-- Upcoming:
-  - **Phase 12 (IPC)**: Unix sockets for APIs, MQTT for events, optional shared
-    memory
-  - **Phase 13 (App Foundation)**, **Phase 14 (AI App)**, **Phase 15 (Maps
-    App)**
-
-- **Phase 0 (Foundation)**: Poetry, linters (ruff/black), type checking (mypy),
-  CI workflows, repo structure, progress tracker.
-- **Phase 1 (Schemas & HIL)**: All message schemas; HIL interfaces; driver
-  factory; 100% tests for these layers.
-- **Phase 2 (Messaging & Base Service)**: MessageBus interface; MQTT (paho-mqtt)
-  implementation; BaseService; dev Docker Compose with Mosquitto.
-- **Phase 3 (Mock Drivers)**: Mock GPS/Radio/Sensor/ModulePort/Power implemented
-  with tests and factory registration.
-- **Phase 4 (Core Daemon)**: State machine, power policy, service loop, FastAPI
-  (`/health`, `/api/status`, `/api/command`), Dockerfile, compose integration.
-- **Phase 5 (Module Manager)**: Protocol helpers, discovery manager, service,
-  FastAPI (`/health`, `/api/modules`), Dockerfile, compose integration.
-- **Phase 6 (Comms Bridge)**: Radio manager, TAK gateway stub, service, FastAPI
-  (`/health`, `/api/radios`, `/api/send`), Dockerfile, compose integration.
-- **Phase 7 (AI Service)**: Preprocessing, inference engine with model runners
-  (MobileNetV3 stub, Phi3-mini stub), REST endpoints (`/api/inference`,
-  `/api/image/classify`, `/api/chat`), two-stage vision→LLM pipeline stub, model
-  registry/config, lazy loading, perf sanity tests; Dockerfile and compose
-  integration.
-- **Phase 8 (Data Logger)**: Async SQLite DB, logger service consuming bus
-  topics (comms, AI, system), REST endpoints for latest records, Dockerfile and
-  compose integration.
-
-## How to Run (Dev)
-
-- Prereqs: Docker, Docker Compose, Python 3.11, Poetry.
-
-For a complete Docker quickstart and common workflows, see
-[Local run with Docker](docs/local_dev_docker.md).
-
-Run tests and quality checks:
+### Run Services
 
 ```bash
-poetry install --no-interaction --no-ansi
+# Start infrastructure and services
+docker-compose -f docker/compose/dev.yml up -d mqtt
+docker-compose -f docker/compose/dev.yml up -d --build core-daemon module-manager comms-bridge ai-service data-logger
 
-# Unit tests (examples)
-poetry run pytest device/libs/{schemas,hil,messaging,common}/tests -q
-poetry run pytest device/services/{core_daemon,module_manager,comms_bridge}/tests -q
+# Verify services are running
+curl http://localhost:8000/health   # core-daemon
+curl http://localhost:8001/health   # module-manager
+curl http://localhost:8002/health   # data-logger
+curl http://localhost:8003/health   # comms-bridge
+curl http://localhost:8010/health   # ai-service
+```
 
-# Lint / format / types
+### Run Tests
+
+```bash
+poetry install --no-interaction
+
+# Unit tests
+poetry run pytest device/libs/ -q
+poetry run pytest device/services/ -q
+
+# Quality checks
 poetry run ruff check device/
 poetry run black --check device/
 poetry run mypy device/ --strict
 ```
 
-Start infrastructure and services:
+## Repository Structure
 
-```bash
-docker-compose -f docker/compose/dev.yml up -d mqtt
-docker-compose -f docker/compose/dev.yml up -d --build core-daemon module-manager comms-bridge ai-service data-logger
+```
+device/
+├── apps/ui/              # Qt/QML frontend with PySide6 backend
+├── libs/
+│   ├── schemas/          # Pydantic message schemas
+│   ├── hil/              # Hardware abstraction interfaces
+│   ├── messaging/        # MQTT message bus
+│   ├── database/         # SQLite async wrapper
+│   └── common/           # Shared utilities
+├── services/
+│   ├── core_daemon/      # System state, power policy
+│   ├── module_manager/   # Module discovery & lifecycle
+│   ├── comms_bridge/     # Radio management, TAK gateway
+│   ├── ai_service/       # On-device inference
+│   └── data_logger/      # Event persistence
+└── drivers/
+    ├── mock/             # Mock hardware for development
+    └── real/             # Real hardware drivers
+docs/                     # Documentation
+progress/                 # Task tracking system
+docker/                   # Docker Compose and configs
 ```
 
-Health checks and basic API calls:
+## Services
+
+| Service        | Port | Description                                       |
+| -------------- | ---- | ------------------------------------------------- |
+| core-daemon    | 8000 | System state machine, power policy, orchestration |
+| module-manager | 8001 | Module discovery and lifecycle management         |
+| data-logger    | 8002 | Event persistence and retrieval                   |
+| comms-bridge   | 8003 | Radio coordination and TAK gateway                |
+| ai-service     | 8010 | Image classification and Q&A inference            |
+
+All services support Unix domain sockets (preferred) and HTTP/JSON APIs.
+
+## UI Application
+
+The Qt/QML frontend provides:
+
+- **Home grid** with app tiles (AI, Maps, Compass, Meshtastic, Camera, Notes,
+  etc.)
+- **Status bar** with time, battery, connectivity indicators
+- **Theme system** with dark mode optimized for outdoor visibility
+- **Settings** for units, display, developer options
+
+Run the UI locally:
 
 ```bash
-curl http://localhost:8000/health          # core-daemon
-curl http://localhost:8001/health          # module-manager
-curl http://localhost:8003/health          # comms-bridge
-curl http://localhost:8010/health          # ai-service
-curl http://localhost:8002/health          # data-logger
-```
-
-## IPC (Local)
-
-- APIs over Unix domain sockets when `USE_UNIX_SOCKET=true` (default):
-  - Sockets in `/tmp/waycore/*.sock`
-  - Examples:
-    - `curl --unix-socket /tmp/waycore/core-daemon.sock http://localhost/health`
-    - `curl --unix-socket /tmp/waycore/ai-service.sock http://localhost/health`
-- Docker Compose mounts a shared volume `waycore-sockets` to `/tmp/waycore` for
-  services.
-- Fallback TCP ports when `USE_UNIX_SOCKET=false` for legacy/debug.
-
-Production policy:
-
-- Prefer UDS exclusively in production:
-  - Set `USE_UNIX_SOCKET=true` for all services
-  - Remove/avoid exposing TCP ports in compose/systemd units
-  - Keep HTTP/TCP only for quick debugging during development
-
-## Service APIs (Dev)
-
-- **Core Daemon (8000)**:
-  - `GET /health`
-  - `GET /api/status`
-  - `POST /api/command` (body: SystemCommand)
-- **Module Manager (8001)**:
-  - `GET /health`
-  - `GET /api/modules`
-- **Comms Bridge (8003)**:
-  - `GET /health`
-  - `GET /api/radios`
-  - `POST /api/send` (body: SendMessageRequest)
-- **AI Service (8010)**:
-  - `GET /health`
-  - `POST /api/inference` (body: AIInferenceRequest)
-  - `POST /api/image/classify` (body: {model_id?, input_data})
-  - `POST /api/chat` (body: {model_id?, question, context})
-- **Data Logger (8002)**:
-  - `GET /health`
-  - `GET /api/ai/latest?n=50`
-  - `GET /api/comms/latest?n=50`
-  - `GET /api/events/latest?n=50`
-
-## Progress Tracking
-
-- We use a file-based task tracker under `progress/`, aligned with
-  `docs/ai_instructions/progress_tracking.md`.
-- New tasks live in `progress/TODO/phase-XX/`, current work in
-  `progress/IN_PROGRESS/`, and completed tasks are archived monthly in
-  `progress/COMPLETED/YYYY-MM/`.
-- Automation:
-  - `scripts/generate-tasks.py` – generate task files from
-    `local_plan/08-implementation-phases.md`
-  - `scripts/task-start.sh PHASE.TASK` – move a task to IN_PROGRESS and stamp
-    start date
-  - `scripts/task-complete.sh PHASE.TASK` – mark as COMPLETED and archive
-  - `scripts/generate-summary.py` – refresh `progress/SUMMARY.md`
-
-Example:
-
-```bash
-python scripts/generate-tasks.py
-./scripts/task-start.sh 4.1
-./scripts/task-complete.sh 4.1
-python scripts/generate-summary.py
+cd device/apps/ui && python main.py
 ```
 
 ## Contributing
 
-- Follow Conventional Commits and small, focused PRs.
-- Open issues with the provided templates (bug, feature, tech debt, docs).
-- See `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`.
+We welcome contributions! Please read:
 
-## Security
+- [Contributing Guide](CONTRIBUTING.md) — Code style, commit conventions, PR
+  process
+- [Code of Conduct](CODE_OF_CONDUCT.md) — Community guidelines
+- [Security Policy](SECURITY.md) — Reporting vulnerabilities
 
-Security disclosures are welcome. See `SECURITY.md` for details.
+## Progress Tracking
+
+We use a file-based task tracking system:
+
+- **[Progress Summary](progress/SUMMARY.md)** — Current status overview
+- **[Task System](progress/README.md)** — How tasks are organized
+- **[Tracking Guide](docs/ai_instructions/progress_tracking.md)** — Detailed
+  workflow
+
+Task categories include sequential phases, production tasks, improvements, and
+ideas.
+
+## License
+
+This project is licensed under the terms in [LICENSE](LICENSE).
