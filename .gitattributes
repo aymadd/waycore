@@ -3,5 +3,3 @@
 # Treat these as documentation
 *.md linguist-documentation
 docs/** linguist-documentation
-
-

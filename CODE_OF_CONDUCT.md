@@ -12,5 +12,3 @@ Reports can be sent privately as described in `SECURITY.md`. Maintainers will re
 
 ## Attribution
 Based on the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
-
-

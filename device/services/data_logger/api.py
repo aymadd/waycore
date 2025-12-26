@@ -41,9 +41,8 @@ def create_app(service: DataLoggerService) -> FastAPI:
     async def ai_latest(n: int = Query(50, ge=1, le=500)) -> list[dict[str, Any]]:
         return await service.latest_ai(n)
 
-    @app.get("/api/comms/latest")
-    async def comms_latest(n: int = Query(50, ge=1, le=500)) -> list[dict[str, Any]]:
-        return await service.latest_comms(n)
+    # Note: Comms messages moved to comms-bridge service (mesh.sqlite3)
+    # Use GET /api/mesh/messages on comms-bridge (port 8003) instead
 
     @app.get("/api/events/latest")
     async def events_latest(n: int = Query(50, ge=1, le=500)) -> list[dict[str, Any]]:
@@ -126,16 +125,16 @@ def create_app(service: DataLoggerService) -> FastAPI:
     @app.post("/api/factory-reset")
     async def factory_reset() -> dict[str, Any]:
         """
-        Clear all user data: notes, preferences, logs.
+        Clear all user data from general and AI databases.
+
+        Clears: notes, events, sensors, AI inferences, and resets preferences.
         """
-        notes_deleted = await service.delete_all_notes()
-        await service.reset_preferences()
-        # Could also clear events, comms_messages, ai_inferences if needed
+        deleted = await service.factory_reset()
 
         return {
             "success": True,
-            "notes_deleted": notes_deleted,
-            "message": "All user data cleared.",
+            "deleted": deleted,
+            "message": "All user data cleared. Preferences reset to defaults.",
         }
 
     return app

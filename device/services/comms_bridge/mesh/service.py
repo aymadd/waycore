@@ -17,7 +17,7 @@ from device.libs.schemas.meshtastic import (
 )
 
 if TYPE_CHECKING:
-    from device.libs.database import AsyncSQLite
+    from device.libs.database import MeshDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -32,17 +32,17 @@ class MeshChatService:
     def __init__(
         self,
         mesh_driver: IMeshNetwork | None = None,
-        db: AsyncSQLite | None = None,
+        db: MeshDatabase | None = None,
     ) -> None:
         """
         Initialize mesh chat service.
 
         Args:
             mesh_driver: Mesh network driver (defaults to MockMeshNetwork)
-            db: Database connection for message persistence (optional)
+            db: MeshDatabase for message/contact persistence (optional)
         """
         self._driver = mesh_driver or MockMeshNetwork()
-        self._db: AsyncSQLite | None = db
+        self._db: MeshDatabase | None = db
         self._message_history: list[MeshMessage] = []
         self._history_loaded = False
 
@@ -229,7 +229,7 @@ class MeshChatService:
         async def _save() -> None:
             try:
                 assert self._db is not None
-                await self._db.save_mesh_message(message)
+                await self._db.save_message(message)
                 logger.debug(f"Persisted message {message.id} to database")
             except Exception as e:
                 logger.error(f"Failed to persist message: {e}")
@@ -251,7 +251,7 @@ class MeshChatService:
             return
 
         try:
-            rows = await self._db.get_mesh_messages(limit=limit)
+            rows = await self._db.get_messages(limit=limit)
             logger.info(f"Loading {len(rows)} messages from database")
 
             for row in rows:
@@ -269,14 +269,18 @@ class MeshChatService:
         """Convert a database row to a MeshMessage."""
         try:
             return MeshMessage(
-                id=str(row.get("id", "")),
+                id=str(row.get("message_id") or row.get("id", "")),
                 from_node=row.get("from_node", ""),
                 to_node=row.get("to_node"),
-                channel=row.get("channel", 0),
+                channel=row.get("channel") or 0,
                 text=row.get("content", ""),
-                timestamp=datetime.fromisoformat(row["ts"]) if row.get("ts") else None,
+                timestamp=(
+                    datetime.fromisoformat(row["timestamp"]) if row.get("timestamp") else None
+                ),
                 rssi=row.get("rssi"),
                 snr=row.get("snr"),
+                hop_count=row.get("hop_count") or 0,
+                acknowledged=bool(row.get("acknowledged")),
             )
         except Exception as e:
             logger.warning(f"Failed to parse message row: {e}")
@@ -288,13 +292,13 @@ class MeshChatService:
         """Get contact info for a node."""
         if not self._db:
             return None
-        return await self._db.get_mesh_contact(node_id)
+        return await self._db.get_contact(node_id)
 
     async def get_all_contacts(self) -> list[dict[str, Any]]:
         """Get all mesh contacts."""
         if not self._db:
             return []
-        return await self._db.get_all_mesh_contacts()
+        return await self._db.get_all_contacts()
 
     async def get_favorite_contacts(self) -> list[dict[str, Any]]:
         """Get all favorited contacts."""
@@ -313,19 +317,40 @@ class MeshChatService:
         """Set alias for a contact."""
         if not self._db:
             return None
-        return await self._db.upsert_mesh_contact(node_id, alias=alias)
+        return await self._db.upsert_contact(node_id, alias=alias)
 
     async def set_contact_notes(self, node_id: str, notes: str) -> dict[str, Any] | None:
         """Set notes for a contact."""
         if not self._db:
             return None
-        return await self._db.upsert_mesh_contact(node_id, notes=notes)
+        return await self._db.upsert_contact(node_id, notes=notes)
 
     async def delete_contact(self, node_id: str) -> bool:
         """Delete a contact."""
         if not self._db:
             return False
-        return await self._db.delete_mesh_contact(node_id)
+        return await self._db.delete_contact(node_id)
+
+    async def factory_reset(self) -> dict[str, int]:
+        """
+        Clear all mesh data (contacts and messages).
+
+        Returns counts of deleted items.
+        """
+        if not self._db:
+            return {"contacts": 0, "messages": 0}
+
+        contacts_deleted = await self._db.delete_all_contacts()
+        messages_deleted = await self._db.delete_all_messages()
+
+        # Clear in-memory history
+        self._message_history.clear()
+        self._history_loaded = False
+
+        return {
+            "contacts": contacts_deleted,
+            "messages": messages_deleted,
+        }
 
     def get_nodes_with_contacts(self) -> list[dict[str, Any]]:
         """Get nodes with contact info merged (sync version for UI)."""
@@ -380,12 +405,12 @@ def get_mesh_service() -> MeshChatService:
     return _mesh_service
 
 
-def init_mesh_service(db: AsyncSQLite | None = None) -> MeshChatService:
+def init_mesh_service(db: MeshDatabase | None = None) -> MeshChatService:
     """
     Initialize the mesh service singleton with database.
 
     Args:
-        db: Database connection for message persistence
+        db: MeshDatabase for message/contact persistence
 
     Returns:
         The initialized mesh service

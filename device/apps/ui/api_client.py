@@ -62,7 +62,7 @@ DATA_LOGGER_SOCKET = "/tmp/waycore/data-logger.sock"
 DATA_LOGGER_HTTP = os.getenv("DATA_LOGGER_URL", "http://localhost:8002")
 
 COMMS_BRIDGE_SOCKET = "/tmp/waycore/comms-bridge.sock"
-COMMS_BRIDGE_HTTP = os.getenv("COMMS_BRIDGE_URL", "http://localhost:8001")
+COMMS_BRIDGE_HTTP = os.getenv("COMMS_BRIDGE_URL", "http://localhost:8003")
 
 
 class CoreDaemonClient(APIClient):
@@ -241,3 +241,7 @@ class CommsBridgeClient(APIClient):
     ) -> dict[str, Any]:
         """Get conversation with a specific node."""
         return self.get(f"/api/mesh/conversation/{node_id}", params={"limit": limit})
+
+    def factory_reset(self) -> dict[str, Any]:
+        """Clear all mesh data (contacts and messages)."""
+        return self.post("/api/factory-reset", json={})

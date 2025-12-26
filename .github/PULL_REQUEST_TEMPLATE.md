@@ -22,5 +22,3 @@ Steps for reviewers to validate changes locally.
 - [ ] I added or updated tests (if applicable)
 - [ ] I included security/privacy considerations (if applicable)
 - [ ] I verified it aligns with MVP scope in `docs/overview.md`
-
-

@@ -46,5 +46,3 @@ body:
       label: Environment details
       description: OS, Python/Node versions, Docker versions, hardware notes, etc.
       placeholder: "e.g., macOS 15, Python 3.11, Node 20, Docker 27"
-
-

@@ -9,7 +9,7 @@ from typing import Any
 
 import uvicorn
 import yaml
-from device.libs.database import AsyncSQLite
+from device.libs.database import MeshDatabase
 from device.libs.messaging.mqtt_bus import MQTTBus
 
 from .api import create_app
@@ -38,15 +38,14 @@ async def run() -> None:
     service = CommsBridgeService(cfg, bus=bus)
     await service.start()
 
-    # Initialize database for mesh message persistence
-    db_path = str(cfg.get("database_path", "data/waycore.sqlite3"))
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    db = AsyncSQLite(db_path)
-    await db.open()
-    logger.info(f"Database opened at {db_path}")
+    # Initialize mesh database for message and contact persistence
+    db_dir = str(cfg.get("database_dir", "data"))
+    mesh_db = MeshDatabase(f"{db_dir}/mesh.sqlite3")
+    await mesh_db.open()
+    logger.info(f"Mesh database opened at {db_dir}/mesh.sqlite3")
 
     # Initialize mesh service with database
-    mesh_service = init_mesh_service(db=db)
+    mesh_service = init_mesh_service(db=mesh_db)
     await mesh_service.load_history_from_db(limit=500)
 
     app = create_app(service)
@@ -82,7 +81,7 @@ async def run() -> None:
     server.should_exit = True
     await server_task
     await service.stop()
-    await db.close()
+    await mesh_db.close()
     await bus.disconnect()
 
 

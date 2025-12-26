@@ -18,6 +18,8 @@ repos:
         additional_dependencies:
           - pydantic>=2
           - types-PyYAML
+          - fastapi>=0.115
+          - uvicorn>=0.30
         args:
           [
             "--strict",

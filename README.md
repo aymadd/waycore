@@ -42,6 +42,7 @@ when the UI is busy or rebooting.
 | [Vision](docs/vision.md)                                  | Full aspirational scope and long-term direction               |
 | [Overview](docs/overview.md)                              | Project scope, architecture decisions, and MVP definition     |
 | [Architecture](docs/architecture/architecture.md)         | Detailed software architecture, services, APIs, and standards |
+| [Database Schema](docs/database-schema.md)                | Database structure, tables, and data models                   |
 | [Progress](progress/SUMMARY.md)                           | Current implementation status and task tracking               |
 | [Local Development](docs/local_dev_docker.md)             | Docker-based development setup and workflows                  |
 | [IPC Guide](local_plan/12-ipc-implementation-guide.md.md) | Inter-process communication strategy                          |
@@ -93,7 +94,7 @@ device/
 │   ├── schemas/          # Pydantic message schemas
 │   ├── hil/              # Hardware abstraction interfaces
 │   ├── messaging/        # MQTT message bus
-│   ├── database/         # SQLite async wrapper
+│   ├── database/         # Domain-specific SQLite databases (general, mesh, ai)
 │   └── common/           # Shared utilities
 ├── services/
 │   ├── core_daemon/      # System state, power policy

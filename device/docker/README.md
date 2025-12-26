@@ -10,5 +10,3 @@ Use Docker Compose to develop on a laptop with mocked hardware. Start by copying
    - `docker compose -f compose.local.yml up --build`
 
 Keep services small and focused. Prefer explicit network links and JSON schemas under `device/proto/`.
-
-

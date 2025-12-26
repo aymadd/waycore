@@ -96,8 +96,12 @@ Rectangle {
                     flat: true
                     onClicked: {
                         if (MeshBridge) {
-                            var result = MeshBridge.toggleFavorite(nodeId)
-                            contact = { ...contact, is_favorite: result.is_favorite }
+                            MeshBridge.toggleFavorite(nodeId)
+                            // Reload contact to get updated favorite status
+                            var contactResult = MeshBridge.getContact(nodeId)
+                            if (contactResult && contactResult.contact) {
+                                contact = contactResult.contact
+                            }
                         }
                     }
                 }

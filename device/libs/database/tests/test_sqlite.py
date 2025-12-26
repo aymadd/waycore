@@ -47,9 +47,10 @@ async def test_preferences_default_values(tmp_path) -> None:  # type: ignore[no-
     await db.open()
     try:
         prefs = await db.get_all_preferences()
-        assert prefs["units.temperature"] == "C"
-        assert prefs["units.distance"] == "km"
-        assert prefs["units.weight"] == "kg"
+        # Defaults are US units
+        assert prefs["units.temperature"] == "F"
+        assert prefs["units.distance"] == "mi"
+        assert prefs["units.weight"] == "lb"
     finally:
         await db.close()
 
@@ -61,17 +62,17 @@ async def test_preferences_get_set(tmp_path) -> None:  # type: ignore[no-untyped
     db = AsyncSQLite(dbfile)
     await db.open()
     try:
-        # Get default value
+        # Get default value (now Fahrenheit)
         temp_unit = await db.get_preference("units.temperature")
-        assert temp_unit == "C"
+        assert temp_unit == "F"
 
-        # Set new valid value
-        success = await db.set_preference("units.temperature", "F")
+        # Set to Celsius
+        success = await db.set_preference("units.temperature", "C")
         assert success is True
 
         # Verify new value
         temp_unit = await db.get_preference("units.temperature")
-        assert temp_unit == "F"
+        assert temp_unit == "C"
     finally:
         await db.close()
 
@@ -87,9 +88,9 @@ async def test_preferences_validation(tmp_path) -> None:  # type: ignore[no-unty
         success = await db.set_preference("units.temperature", "K")  # Kelvin not allowed
         assert success is False
 
-        # Value should still be default
+        # Value should still be default (Fahrenheit)
         temp_unit = await db.get_preference("units.temperature")
-        assert temp_unit == "C"
+        assert temp_unit == "F"
     finally:
         await db.close()
 
@@ -101,16 +102,16 @@ async def test_preferences_reset(tmp_path) -> None:  # type: ignore[no-untyped-d
     db = AsyncSQLite(dbfile)
     await db.open()
     try:
-        # Change a preference
-        await db.set_preference("units.temperature", "F")
-        await db.set_preference("units.distance", "mi")
+        # Change a preference from defaults
+        await db.set_preference("units.temperature", "C")
+        await db.set_preference("units.distance", "km")
 
         # Reset all
         await db.reset_preferences()
 
-        # Verify defaults restored
+        # Verify defaults restored (US units)
         prefs = await db.get_all_preferences()
-        assert prefs["units.temperature"] == "C"
-        assert prefs["units.distance"] == "km"
+        assert prefs["units.temperature"] == "F"
+        assert prefs["units.distance"] == "mi"
     finally:
         await db.close()

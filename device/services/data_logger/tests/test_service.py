@@ -4,10 +4,8 @@ import asyncio
 from typing import Callable
 
 import pytest
-
-from ....libs.schemas.ai import AIInferenceResponse, InferenceResult, InferenceType
-from ....libs.schemas.comms import MessageReceived, Transport
-from ..service import DataLoggerService
+from device.libs.schemas.ai import AIInferenceResponse, InferenceResult, InferenceType
+from device.services.data_logger.service import DataLoggerService
 
 
 class _FakeBus:
@@ -36,38 +34,26 @@ class _FakeBus:
 
 
 @pytest.mark.asyncio
-async def test_data_logger_handles_messages_and_logs(tmp_path) -> None:  # type: ignore[no-untyped-def]
-    db_path = tmp_path / "db.sqlite3"
+async def test_data_logger_handles_ai_and_events(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Test that data logger handles AI inferences and system events."""
     bus = _FakeBus()
     cfg = {
-        "database_path": str(db_path),
+        "database_dir": str(tmp_path),
         "idle_sleep_seconds": 0.01,
     }
     svc = DataLoggerService(cfg, bus=bus)  # type: ignore[arg-type]
     await svc.start()
     try:
-        # Simulate comms message
-        msg = MessageReceived(
-            source="test",
-            transport=Transport.lora,
-            from_node="a",
-            to_node="b",
-            content="hello",
-            channel="primary",
-            rssi=-70.0,
-            snr=5.0,
-            hop_limit=3,
-        )
-        bus.simulate("comms/message/received", msg.model_dump_json())
-
         # Simulate AI inference
+        import uuid
+
         resp = AIInferenceResponse(
             source="test",
-            request_id=msg.msg_id,  # reuse id just for linkage
+            request_id=uuid.uuid4(),
             inference_type=InferenceType.qa,
             model_id="m1",
-            results=[InferenceResult(label="ok", confidence=0.0)],
-            processing_time_ms=1,
+            results=[InferenceResult(label="ok", confidence=0.9)],
+            processing_time_ms=100,
             success=True,
             error_message=None,
         )
@@ -79,12 +65,75 @@ async def test_data_logger_handles_messages_and_logs(tmp_path) -> None:  # type:
         # allow tasks to run
         await asyncio.sleep(0.05)
 
-        # Quick sanity: check via service's db
-        ai_rows = await svc._db.fetch_latest("ai_inferences", 5)  # type: ignore[attr-defined]
-        cm_rows = await svc._db.fetch_latest("comms_messages", 5)  # type: ignore[attr-defined]
-        ev_rows = await svc._db.fetch_latest("events", 5)  # type: ignore[attr-defined]
+        # Check AI inferences were logged
+        ai_rows = await svc.latest_ai(5)
         assert len(ai_rows) >= 1
-        assert len(cm_rows) >= 1
+        assert ai_rows[0]["model_id"] == "m1"
+
+        # Check events were logged
+        ev_rows = await svc.latest_events(5)
         assert len(ev_rows) >= 1
+    finally:
+        await svc.stop()
+
+
+@pytest.mark.asyncio
+async def test_data_logger_preferences(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Test preferences are stored and retrieved correctly."""
+    cfg = {
+        "database_dir": str(tmp_path),
+        "idle_sleep_seconds": 0.01,
+    }
+    svc = DataLoggerService(cfg, bus=None)
+    await svc.start()
+    try:
+        # Default preferences should be set
+        prefs = await svc.get_all_preferences()
+        assert "units.temperature" in prefs
+
+        # Set a preference
+        await svc.set_preference("test.key", "test_value")
+        value = await svc.get_preference("test.key")
+        assert value == "test_value"
+
+        # Reset should restore defaults
+        await svc.reset_preferences()
+        value = await svc.get_preference("test.key")
+        assert value is None
+    finally:
+        await svc.stop()
+
+
+@pytest.mark.asyncio
+async def test_data_logger_notes(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Test notes CRUD operations."""
+    cfg = {
+        "database_dir": str(tmp_path),
+        "idle_sleep_seconds": 0.01,
+    }
+    svc = DataLoggerService(cfg, bus=None)
+    await svc.start()
+    try:
+        # Create a note
+        note_id = await svc.create_note("Test Title", "Test Content")
+        assert note_id > 0
+
+        # Get the note
+        note = await svc.get_note(note_id)
+        assert note is not None
+        assert note["title"] == "Test Title"
+        assert note["content"] == "Test Content"
+
+        # Update the note
+        updated = await svc.update_note(note_id, "Updated Title", "Updated Content")
+        assert updated is True
+
+        # Delete the note
+        deleted = await svc.delete_note(note_id)
+        assert deleted is True
+
+        # Verify deleted
+        note = await svc.get_note(note_id)
+        assert note is None
     finally:
         await svc.stop()

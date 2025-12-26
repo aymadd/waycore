@@ -367,11 +367,16 @@ class SensorBridge(QObject):
     @Slot(result=bool)  # type: ignore[arg-type]
     def factoryReset(self) -> bool:
         """
-        Perform factory reset on backend services.
-        Clears all user data and resets settings to defaults.
-        Returns True if successful.
+        Perform factory reset on ALL backend services.
+
+        Clears:
+        - Core daemon: sensor states
+        - Data logger: notes, events, sensors, AI inferences, preferences
+        - Comms bridge: mesh contacts and messages
+
+        Returns True if all resets successful.
         """
-        from .api_client import DataLoggerClient
+        from .api_client import CommsBridgeClient, DataLoggerClient
 
         success = True
 
@@ -384,13 +389,22 @@ class SensorBridge(QObject):
                 logger.error(f"Core daemon factory reset failed: {e}")
                 success = False
 
-        # Reset data logger (notes, preferences, logs)
+        # Reset data logger (notes, preferences, events, AI logs)
         try:
             data_client = DataLoggerClient()
             data_client.factory_reset()
             logger.info("Data logger factory reset complete")
         except Exception as e:
             logger.error(f"Data logger factory reset failed: {e}")
+            success = False
+
+        # Reset comms bridge (mesh contacts and messages)
+        try:
+            comms_client = CommsBridgeClient()
+            comms_client.factory_reset()
+            logger.info("Comms bridge factory reset complete")
+        except Exception as e:
+            logger.error(f"Comms bridge factory reset failed: {e}")
             success = False
 
         return success

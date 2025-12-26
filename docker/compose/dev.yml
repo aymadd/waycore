@@ -54,6 +54,7 @@ services:
     container_name: waycore-comms-bridge
     environment:
       - COMMS_BRIDGE_CONFIG=/app/device/services/comms_bridge/config/default.yaml
+      - USE_UNIX_SOCKET=false  # Use HTTP for local dev (UI runs outside Docker)
     ports:
       - "8003:8003"
     depends_on:
@@ -62,6 +63,7 @@ services:
       - waycore-dev
     volumes:
       - waycore-sockets:/tmp/waycore
+      - waycore-data:/app/data  # Mesh database files
   data-logger:
     build:
       context: ../..
@@ -96,12 +98,15 @@ services:
     volumes:
       - waycore-sockets:/tmp/waycore
 
-  # Web-based SQLite database viewer
+  # Web-based SQLite database viewer (shows all domain databases)
   db-viewer:
     image: datasetteproject/datasette:latest
     container_name: waycore-db-viewer
     command: >
-      datasette /data/logger.sqlite3
+      datasette
+      /data/general.sqlite3
+      /data/mesh.sqlite3
+      /data/ai.sqlite3
       --host 0.0.0.0
       --port 8080
       --setting sql_time_limit_ms 5000
@@ -109,9 +114,10 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - waycore-data:/data:ro
+      - waycore-data:/data
     depends_on:
       - data-logger
+      - comms-bridge
     networks:
       - waycore-dev
     restart: "no"

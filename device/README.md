@@ -16,5 +16,3 @@ Top-level workspace for the runtime device stack. This mirrors the architecture 
 - `docker/`: compose files and container notes for simulation-first development
 
 Start by building mocked flows and services locally. Hardware integration comes later phases.
-
-

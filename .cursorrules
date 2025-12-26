@@ -54,6 +54,22 @@ progress/
 - ❌ Use emoji status markers like `✅ DONE` (use `COMPLETED` text only)
 - ❌ Include time or effort estimates in task files (no "Estimated effort", "Time Tracking", or hour estimates)
 
+---
+
+## Git Operations (MANDATORY)
+
+**The agent MUST NOT commit or push changes to the repository.**
+
+- ❌ NEVER run `git commit`
+- ❌ NEVER run `git push`
+- ❌ NEVER run `git merge` or `git rebase`
+- ❌ NEVER modify git history in any way
+
+The user is responsible for reviewing changes and managing all git operations. The agent may only:
+- ✅ Run `git status` to check the current state
+- ✅ Run `git diff` to review changes
+- ✅ Run `git log` to view history (read-only)
+
 ### Task Status Values
 
 Only use these exact status values:
@@ -135,9 +151,56 @@ Example: `feat: add sensor registry with dynamic discovery`
 
 ---
 
+## Database Schema Documentation (MANDATORY)
+
+When making ANY changes to database structure, you MUST update `docs/database-schema.md`:
+
+### Trigger Conditions
+
+Update the schema documentation when:
+- ✅ Adding, removing, or modifying database tables
+- ✅ Adding, removing, or modifying table columns
+- ✅ Adding or modifying database indexes
+- ✅ Creating new database files (e.g., a new domain database)
+- ✅ Changing default values for any database field
+- ✅ Modifying database class methods that affect schema
+
+### Update Checklist
+
+1. Update the "Last Updated" date at the top of `docs/database-schema.md`
+2. Update the relevant database section (General, Mesh, or AI)
+3. If adding a new table:
+   - Add table description
+   - Document all columns with types and descriptions
+   - Document any indexes
+4. If adding a new database:
+   - Add to the "Database Architecture" table
+   - Create a new section with full schema
+   - Update the "Future Databases" section if applicable
+5. Update code examples if method signatures changed
+
+### Database Files
+
+| Database | Location | Owner Service |
+|----------|----------|---------------|
+| `general.sqlite3` | `/app/data/` | data-logger |
+| `mesh.sqlite3` | `/app/data/` | comms-bridge |
+| `ai.sqlite3` | `/app/data/` | data-logger |
+
+### Database Classes
+
+| Class | File |
+|-------|------|
+| `GeneralDatabase` | `device/libs/database/general.py` |
+| `MeshDatabase` | `device/libs/database/mesh.py` |
+| `AIDatabase` | `device/libs/database/ai.py` |
+
+---
+
 ## Reference Documents
 
-- Architecture: `local_plan/01-architecture-overview.md`
+- Architecture: `docs/architecture/architecture.md`
+- Database Schema: `docs/database-schema.md`
 - Implementation phases: `local_plan/08-implementation-phases.md`
 - Progress tracking: `docs/ai_instructions/progress_tracking.md`
 - Design system: `local_plan/10-design-system.md`

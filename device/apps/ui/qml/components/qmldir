@@ -1,0 +1,11 @@
+module UI
+AppBar 1.0 AppBar.qml
+Button 1.0 Button.qml
+Card 1.0 Card.qml
+Dialog 1.0 Dialog.qml
+Icon 1.0 Icon.qml
+ListItem 1.0 ListItem.qml
+LoadingIndicator 1.0 LoadingIndicator.qml
+SignalBars 1.0 SignalBars.qml
+TextField 1.0 TextField.qml
+Toast 1.0 Toast.qml

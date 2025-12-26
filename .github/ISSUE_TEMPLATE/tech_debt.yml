@@ -30,5 +30,3 @@ body:
         - label: Reduces complexity/duplication
         - label: Improves performance
         - label: Improves reliability
-
-

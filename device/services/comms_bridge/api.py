@@ -210,6 +210,22 @@ def create_app(service: CommsBridgeService) -> FastAPI:
         deleted = await mesh.delete_contact(node_id)
         return {"deleted": deleted, "node_id": node_id}
 
+    # --- Factory Reset ---
+
+    @app.post("/api/factory-reset")
+    async def factory_reset() -> dict[str, Any]:
+        """
+        Clear all mesh data (contacts and messages).
+        """
+        mesh = get_mesh_service()
+        deleted = await mesh.factory_reset()
+
+        return {
+            "success": True,
+            "deleted": deleted,
+            "message": "All mesh data cleared.",
+        }
+
     @app.get("/api/mesh/nodes/enriched")
     async def get_nodes_with_contacts(
         online_only: bool = Query(False),

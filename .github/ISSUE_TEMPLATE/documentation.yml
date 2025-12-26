@@ -15,5 +15,3 @@ body:
     attributes:
       label: References
       description: Links to related issues/PRs/sections (e.g., `docs/overview.md`)
-
-

@@ -12,5 +12,3 @@ This repository and its artifacts (services under `device/` and docs) are in sco
 
 ## Response
 We aim to acknowledge reports within 72 hours and will coordinate on a fix and disclosure timeline.
-
-

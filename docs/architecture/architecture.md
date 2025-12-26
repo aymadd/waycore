@@ -5,7 +5,7 @@ services, internal/external communications, third‑party dependencies, UI
 guidelines, standards, and extension points.
 
 > **Quick Links:** [Vision](../vision.md) • [Project Overview](../overview.md) •
-> [Development Setup](../local_dev_docker.md) •
+> [Database Schema](../database-schema.md) • [Development Setup](../local_dev_docker.md) •
 > [Progress](../../progress/SUMMARY.md)
 
 ## System goals
@@ -155,14 +155,25 @@ Notes:
 
 ## Data storage
 
-- Backend: SQLite via `aiosqlite` wrapper (`device/libs/database/sqlite.py`)
-- Mode: WAL enabled; simple append‑only tables
-- Tables:
-  - `events(topic, payload, ts)` for arbitrary bus events
-  - `comms_messages(transport, from_node, to_node, content, channel, rssi, snr, metadata, ts)`
-  - `ai_inferences(request_id, model_id, inference_type, success, results, error_message, ts)`
-- Retention: implemented by consumer policy (future work: rotation/retention
-  enforcement)
+The system uses **three separate SQLite databases** for domain separation:
+
+| Database | File | Service | Purpose |
+|----------|------|---------|---------|
+| **General** | `general.sqlite3` | data-logger | Preferences, notes, sensors, events |
+| **Mesh** | `mesh.sqlite3` | comms-bridge | Mesh contacts and messages |
+| **AI** | `ai.sqlite3` | data-logger | AI inference logs |
+
+- Backend: SQLite via `aiosqlite` with domain-specific wrappers
+- Mode: WAL enabled for concurrent access
+- Storage: Docker named volume (`waycore-data`) at `/app/data/`
+- Classes: `GeneralDatabase`, `MeshDatabase`, `AIDatabase` in `device/libs/database/`
+
+> **Full Schema Details**: See [Database Schema Documentation](../database-schema.md)
+
+Design principles:
+- Large/important apps get dedicated databases (mesh, ai, future: maps)
+- Smaller apps and system settings share the general database
+- Retention: implemented by consumer policy (future work: rotation/retention)
 
 ## AI architecture
 
@@ -298,6 +309,7 @@ AI (optional/planned by model choice):
 | Main README        | `README.md`                                    |
 | Vision Document    | `docs/vision.md`                               |
 | Project Overview   | `docs/overview.md`                             |
+| Database Schema    | `docs/database-schema.md`                      |
 | Shared Schemas     | `device/libs/schemas/`                         |
 | Services           | `device/services/`                             |
 | UI Application     | `device/apps/ui/`                              |

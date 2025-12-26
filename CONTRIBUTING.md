@@ -33,5 +33,3 @@ Report vulnerabilities per `SECURITY.md`. Do not open public issues for sensitiv
 
 ## Community Standards
 Be respectful and constructive. See `CODE_OF_CONDUCT.md`.
-
-

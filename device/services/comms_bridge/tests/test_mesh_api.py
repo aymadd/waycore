@@ -158,10 +158,10 @@ class TestMeshContacts:
     @pytest.mark.asyncio
     async def test_toggle_favorite(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         """Test toggling favorite status."""
-        from device.libs.database import AsyncSQLite
+        from device.libs.database import MeshDatabase
 
         db_path = tmp_path / "test.sqlite3"
-        db = AsyncSQLite(str(db_path))
+        db = MeshDatabase(str(db_path))
         await db.open()
 
         # Toggle favorite on (no existing contact)
@@ -181,19 +181,19 @@ class TestMeshContacts:
     @pytest.mark.asyncio
     async def test_contact_alias(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         """Test setting contact alias."""
-        from device.libs.database import AsyncSQLite
+        from device.libs.database import MeshDatabase
 
         db_path = tmp_path / "test.sqlite3"
-        db = AsyncSQLite(str(db_path))
+        db = MeshDatabase(str(db_path))
         await db.open()
 
         # Set alias
-        contact = await db.upsert_mesh_contact("!a1b2c3d4", alias="My Friend")
+        contact = await db.upsert_contact("!a1b2c3d4", alias="My Friend")
         assert contact["alias"] == "My Friend"
         assert contact["is_favorite"] == 0  # Default
 
         # Update alias
-        contact = await db.upsert_mesh_contact("!a1b2c3d4", alias="Best Friend")
+        contact = await db.upsert_contact("!a1b2c3d4", alias="Best Friend")
         assert contact["alias"] == "Best Friend"
 
         await db.close()
@@ -201,16 +201,16 @@ class TestMeshContacts:
     @pytest.mark.asyncio
     async def test_get_favorites(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         """Test getting favorite contacts."""
-        from device.libs.database import AsyncSQLite
+        from device.libs.database import MeshDatabase
 
         db_path = tmp_path / "test.sqlite3"
-        db = AsyncSQLite(str(db_path))
+        db = MeshDatabase(str(db_path))
         await db.open()
 
         # Add some contacts
-        await db.upsert_mesh_contact("!node1", alias="Node 1", is_favorite=True)
-        await db.upsert_mesh_contact("!node2", alias="Node 2", is_favorite=False)
-        await db.upsert_mesh_contact("!node3", alias="Node 3", is_favorite=True)
+        await db.upsert_contact("!node1", alias="Node 1", is_favorite=True)
+        await db.upsert_contact("!node2", alias="Node 2", is_favorite=False)
+        await db.upsert_contact("!node3", alias="Node 3", is_favorite=True)
 
         # Get favorites
         favorites = await db.get_favorite_contacts()
@@ -225,11 +225,11 @@ class TestMeshContacts:
     @pytest.mark.asyncio
     async def test_service_contacts(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         """Test mesh service contact methods."""
-        from device.libs.database import AsyncSQLite
+        from device.libs.database import MeshDatabase
         from device.services.comms_bridge.mesh.service import init_mesh_service
 
         db_path = tmp_path / "test.sqlite3"
-        db = AsyncSQLite(str(db_path))
+        db = MeshDatabase(str(db_path))
         await db.open()
 
         service = init_mesh_service(db=db)
@@ -257,13 +257,13 @@ class TestMeshMessagePersistence:
     @pytest.mark.asyncio
     async def test_save_and_load_messages(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         """Test saving and loading messages from database."""
-        from device.libs.database import AsyncSQLite
+        from device.libs.database import MeshDatabase
         from device.libs.schemas.meshtastic import MeshMessageCreate
         from device.services.comms_bridge.mesh.service import init_mesh_service
 
         # Create database
         db_path = tmp_path / "test.sqlite3"
-        db = AsyncSQLite(str(db_path))
+        db = MeshDatabase(str(db_path))
         await db.open()
 
         # Initialize service with database
@@ -280,7 +280,7 @@ class TestMeshMessagePersistence:
         await asyncio.sleep(0.1)
 
         # Check message was saved
-        rows = await db.get_mesh_messages(limit=10)
+        rows = await db.get_messages(limit=10)
         assert len(rows) >= 1
         assert any(r["content"] == "Test message for DB" for r in rows)
 
@@ -289,15 +289,15 @@ class TestMeshMessagePersistence:
     @pytest.mark.asyncio
     async def test_load_history_on_init(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         """Test loading message history from database on startup."""
-        from device.libs.database import AsyncSQLite
+        from device.libs.database import MeshDatabase
 
         # Create database and add a message
         db_path = tmp_path / "test.sqlite3"
-        db = AsyncSQLite(str(db_path))
+        db = MeshDatabase(str(db_path))
         await db.open()
 
         # Manually insert a message
-        await db.save_mesh_message(
+        await db.save_message(
             message_id="test_123",
             from_node="!a1b2c3d4",
             to_node=None,
