@@ -27,7 +27,7 @@ COMMS_BRIDGE_URL = os.getenv("COMMS_BRIDGE_URL", "http://localhost:8003")
 USE_MOCK_DATA = os.getenv("USE_MOCK_DATA", "false").lower() == "true"
 
 
-@server.list_tools()  # type: ignore[misc]
+@server.list_tools()  # type: ignore
 async def list_tools() -> list[Tool]:
     """List available action tools."""
     return [
@@ -129,7 +129,7 @@ async def list_tools() -> list[Tool]:
     ]
 
 
-@server.call_tool()  # type: ignore[misc]
+@server.call_tool()  # type: ignore
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Execute an action tool.
 

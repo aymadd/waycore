@@ -41,3 +41,7 @@ progress/**/.cache/
 
 # Runtime data directories (Docker volumes handle this)
 /data/
+
+# AI models (Docker volumes handle model storage)
+# Download with: ./scripts/download-models.sh
+/models/

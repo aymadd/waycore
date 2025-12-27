@@ -1469,6 +1469,48 @@
         ]
       }
     },
+    "/api/chat/multimodal": {
+      "post": {
+        "description": "Multimodal chat endpoint combining image + text question.\n\nRequest body:\n    question: str - User's question about the image (optional)\n    image_b64: str - Base64-encoded image (optional)\n    model_id: str - Model to use (default: phi3-mini)\n\nSupports three modes:\n1. Image + Question: Two-stage pipeline (vision → LLM)\n2. Image only: Returns classification results\n3. Question only: Standard chat (redirects to /api/chat)\n\nReturns:\n    JSONResponse with response text and metadata",
+        "operationId": "chat_multimodal_api_chat_multimodal_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat Multimodal",
+        "tags": [
+          "ai-service"
+        ]
+      }
+    },
     "/api/command": {
       "post": {
         "operationId": "command_api_command_post",

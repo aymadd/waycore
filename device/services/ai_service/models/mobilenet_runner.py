@@ -122,15 +122,15 @@ class MobileNetV3Runner(ModelRunner):
 
         try:
             # Get image data from preprocessed input
+            # ImagePreprocessed has: type, source ("bytes" or "b64"), data, options
             image_data: bytes | None = None
-            raw_data = pre.get("image_data")
-            if isinstance(raw_data, bytes):
-                image_data = raw_data
-            elif not raw_data:
-                # Try to decode from base64 if raw data not available
-                image_b64 = pre.get("image_b64", "")
-                if isinstance(image_b64, str) and image_b64:
-                    image_data = base64.b64decode(image_b64)
+            source = pre.get("source", "")
+            data = pre.get("data")
+
+            if source == "bytes" and isinstance(data, bytes):
+                image_data = data
+            elif source == "b64" and isinstance(data, str) and data:
+                image_data = base64.b64decode(data)
 
             if not image_data:
                 return [
@@ -148,9 +148,15 @@ class MobileNetV3Runner(ModelRunner):
             self._interpreter.set_tensor(self._input_details[0]["index"], input_tensor)
             self._interpreter.invoke()
 
-            # Get output probabilities
+            # Get output logits
             output_data = self._interpreter.get_tensor(self._output_details[0]["index"])
-            probabilities = output_data[0]
+            logits = output_data[0]
+
+            # Apply softmax to convert logits to probabilities
+            import numpy as np
+
+            exp_logits = np.exp(logits - np.max(logits))  # Subtract max for numerical stability
+            probabilities = exp_logits / np.sum(exp_logits)
 
             # Get top-5 predictions
             top_k = 5

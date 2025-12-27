@@ -17,6 +17,11 @@ Rectangle {
     property int currentConversationId: 0
     property bool wasLoading: false  // Track loading state transitions
 
+    // Multimodal state - attached image for Visual Q&A
+    property string attachedImagePath: ""
+    property string attachedImageB64: ""
+    property bool hasAttachedImage: attachedImagePath !== "" || attachedImageB64 !== ""
+
     Component.onCompleted: {
         loadMessages()
         loadModels()
@@ -53,7 +58,9 @@ Rectangle {
     }
 
     function sendMessage(text) {
-        if (!text.trim() || isLoading) return
+        // Allow sending with just an attached image (no text required)
+        if (!text.trim() && !hasAttachedImage) return
+        if (isLoading) return
 
         // Clear input immediately for better UX
         var messageText = text
@@ -65,23 +72,52 @@ Rectangle {
             // Set loading immediately for instant feedback
             wasLoading = true
             isLoading = true
-            // Async call - result comes via chatCompleted signal
-            AIBridge.sendChat(messageText)
+
+            // Check if we have an attached image for multimodal
+            if (hasAttachedImage) {
+                // Use multimodal API (image + question)
+                // Note: model_id is already set via setModelId above
+                if (attachedImagePath) {
+                    AIBridge.sendMultimodalChatFromPath(messageText, attachedImagePath)
+                } else if (attachedImageB64) {
+                    AIBridge.sendMultimodalChat(messageText, attachedImageB64)
+                }
+                // Clear attached image after sending
+                clearAttachedImage()
+            } else {
+                // Regular text-only chat
+                AIBridge.sendChat(messageText)
+            }
         } else {
             // Mock: add messages locally
             var userMsg = {
                 role: "user",
-                content: messageText,
+                content: hasAttachedImage ? "📷 " + messageText : messageText,
                 timestamp: new Date().toISOString()
             }
             var assistantMsg = {
                 role: "assistant",
-                content: "This is a mock response. Connect to the AI service for real answers.",
+                content: hasAttachedImage
+                    ? "This is a mock multimodal response. I can see the image you attached."
+                    : "This is a mock response. Connect to the AI service for real answers.",
                 timestamp: new Date().toISOString()
             }
             messages = messages.concat([userMsg, assistantMsg])
+            clearAttachedImage()
             messageInput.enabled = true
         }
+    }
+
+    function clearAttachedImage() {
+        attachedImagePath = ""
+        attachedImageB64 = ""
+    }
+
+    function attachImageFromPath(filePath) {
+        // Remove file:// prefix if present
+        var cleanPath = filePath.toString().replace(/^file:\/\//, "")
+        attachedImagePath = cleanPath
+        attachedImageB64 = ""
     }
 
     function clearChat() {
@@ -145,14 +181,19 @@ Rectangle {
     }
 
     function classifyImageFromFile(filePath) {
+        // Legacy function - now attaches image instead of immediate classification
+        if (isLoading || !filePath) return
+        attachImageFromPath(filePath)
+    }
+
+    function classifyImageDirectly(filePath) {
+        // Direct classification without multimodal (legacy behavior)
         if (isLoading || !filePath) return
 
         if (AIBridge) {
-            // Set loading immediately for instant feedback
             wasLoading = true
             isLoading = true
             messageInput.enabled = false
-            // Async call - loads image and classifies it
             AIBridge.classifyImageFromPath(filePath)
         } else {
             classifyMockImage()
@@ -202,6 +243,14 @@ Rectangle {
 
         function onImageClassifyCompleted(result) {
             // Image classification completed
+            if (!result.success) {
+                toast.show("Error: " + (result.error || "Unknown error"))
+            }
+            updateConversationId()
+        }
+
+        function onMultimodalChatCompleted(result) {
+            // Multimodal (image + question) chat completed
             if (!result.success) {
                 toast.show("Error: " + (result.error || "Unknown error"))
             }
@@ -487,6 +536,95 @@ Rectangle {
             color: App.Theme.divider
         }
 
+        // Attached image preview
+        Rectangle {
+            id: attachmentPreview
+            Layout.fillWidth: true
+            Layout.preferredHeight: hasAttachedImage ? 80 : 0
+            visible: hasAttachedImage
+            color: App.Theme.surfaceElevated
+            clip: true
+
+            Behavior on Layout.preferredHeight {
+                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: App.Theme.spacingSmall
+                spacing: App.Theme.spacingSmall
+
+                // Image thumbnail
+                Rectangle {
+                    Layout.preferredWidth: 60
+                    Layout.preferredHeight: 60
+                    radius: 8
+                    color: App.Theme.background
+                    clip: true
+
+                    Image {
+                        anchors.fill: parent
+                        anchors.margins: 2
+                        source: attachedImagePath ? "file://" + attachedImagePath : ""
+                        fillMode: Image.PreserveAspectCrop
+                        visible: attachedImagePath !== ""
+                    }
+
+                    // Placeholder when no preview available
+                    Text {
+                        anchors.centerIn: parent
+                        text: "📷"
+                        font.pixelSize: 24
+                        visible: attachedImagePath === "" && attachedImageB64 !== ""
+                    }
+                }
+
+                // Description
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    Text {
+                        text: "📎 Image attached"
+                        color: App.Theme.textPrimary
+                        font.pixelSize: App.Theme.bodySize
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: "Type a question or send to analyze"
+                        color: App.Theme.textSecondary
+                        font.pixelSize: App.Theme.captionSize
+                    }
+                }
+
+                // Remove button
+                Button {
+                    text: "✕"
+                    font.pixelSize: 16
+                    onClicked: clearAttachedImage()
+
+                    background: Rectangle {
+                        color: parent.hovered ? App.Theme.error : App.Theme.surface
+                        radius: 16
+                        implicitWidth: 32
+                        implicitHeight: 32
+                    }
+
+                    contentItem: Text {
+                        text: "✕"
+                        color: parent.hovered ? "#FFFFFF" : App.Theme.textSecondary
+                        font.pixelSize: 16
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Remove image"
+                }
+            }
+        }
+
         // Input bar
         Rectangle {
             Layout.fillWidth: true
@@ -503,39 +641,41 @@ Rectangle {
                     id: galleryButton
                     text: "🖼️"
                     font.pixelSize: 20
-                    enabled: !isLoading
+                    enabled: !isLoading && !hasAttachedImage
                     onClicked: openGalleryPicker()
 
                     ToolTip.visible: hovered
-                    ToolTip.text: "Pick from gallery"
+                    ToolTip.text: "Attach image for Visual Q&A"
 
                     background: Rectangle {
                         color: galleryButton.hovered ? App.Theme.surfaceElevated : "transparent"
                         radius: 20
+                        opacity: galleryButton.enabled ? 1.0 : 0.5
                     }
                 }
 
-                // Camera capture button
+                // Camera capture button (legacy direct classification)
                 Button {
                     id: cameraButton
                     text: "📷"
                     font.pixelSize: 20
-                    enabled: !isLoading
+                    enabled: !isLoading && !hasAttachedImage
                     onClicked: classifyMockImage()
 
                     ToolTip.visible: hovered
-                    ToolTip.text: "Capture photo"
+                    ToolTip.text: "Quick capture & classify"
 
                     background: Rectangle {
                         color: cameraButton.hovered ? App.Theme.surfaceElevated : "transparent"
                         radius: 20
+                        opacity: cameraButton.enabled ? 1.0 : 0.5
                     }
                 }
 
                 TextField {
                     id: messageInput
                     Layout.fillWidth: true
-                    placeholderText: "Ask me anything..."
+                    placeholderText: hasAttachedImage ? "Ask about this image..." : "Ask me anything..."
                     font.pixelSize: App.Theme.bodySize
                     enabled: !isLoading
 
@@ -556,8 +696,8 @@ Rectangle {
 
                 Button {
                     id: sendButton
-                    text: isLoading ? "..." : "Send"
-                    enabled: messageInput.text.trim().length > 0 && !isLoading
+                    text: isLoading ? "..." : (hasAttachedImage ? "Ask" : "Send")
+                    enabled: (messageInput.text.trim().length > 0 || hasAttachedImage) && !isLoading
 
                     background: Rectangle {
                         color: sendButton.enabled ? App.Theme.primary : App.Theme.disabled

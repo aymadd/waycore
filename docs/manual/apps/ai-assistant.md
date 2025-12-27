@@ -94,22 +94,28 @@ Ask about your current conditions — the AI reads your device sensors:
 | "How's my battery?" | Power monitor |
 | "What time is it?" | System clock |
 
-### Image Analysis
+### Visual Q&A (Image + Question)
 
-Attach an image to get AI assistance:
+The AI can analyze images and answer questions about them. This uses a two-stage pipeline: first the vision model identifies what's in the image, then the language model answers your question based on that analysis.
 
-1. Tap the **📷** camera button to take a photo
-2. Or tap **🖼️** to select from your gallery
-3. Add a question like "What plant is this?"
-4. Tap Send
+**How to use:**
+
+1. Tap **🖼️** (gallery) to select an image, or **📷** (camera) to take a photo
+2. The image appears as an attachment preview above the input
+3. Type your question (e.g., "What plant is this?" or "Is this mushroom safe?")
+4. Tap **Ask** to send both the image and question together
+
+**You can also:**
+- Send just an image (the AI will describe what it sees)
+- Remove the attachment by tapping ✕ before sending
 
 **Use cases:**
-- Plant identification (always verify independently!)
-- Animal track identification
-- Terrain analysis
-- Reading trail signs
+- Plant/mushroom identification (always verify independently!)
+- Animal and track identification
+- Terrain and landmark analysis
+- Reading trail signs or maps
 
-⚠️ **Reminder**: Image-based plant identification is especially unreliable. Many dangerous species closely resemble safe ones in photos.
+⚠️ **Critical Warning**: Image-based plant/mushroom identification is especially unreliable. Many dangerous species closely resemble safe ones in photos. **Never consume anything based solely on AI identification.**
 
 ### Conversation History
 
@@ -163,7 +169,8 @@ Response times vary based on question complexity:
 | Sensor data | 1-2 seconds |
 | Simple question | 3-5 seconds |
 | Complex question | 5-10 seconds |
-| Image analysis | 8-15 seconds |
+| Visual Q&A (image + question) | 8-15 seconds |
+| Image-only analysis | 5-10 seconds |
 
 Keep the device cool — high temperatures can slow processing.
 

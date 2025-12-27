@@ -286,6 +286,36 @@ class AIServiceClient(APIClient):
             },
         )
 
+    def chat_multimodal(
+        self,
+        question: str = "",
+        image_b64: str = "",
+        model_id: str = "phi3-mini",
+    ) -> dict[str, Any]:
+        """Multimodal chat: image + question.
+
+        Supports three modes:
+        1. Image + Question: Two-stage pipeline (vision → LLM)
+        2. Image only: Returns classification results
+        3. Question only: Standard chat
+
+        Args:
+            question: User's question about the image (optional)
+            image_b64: Base64-encoded image (optional)
+            model_id: LLM model to use (default: phi3-mini)
+
+        Returns:
+            Response with answer and metadata
+        """
+        return self.post(
+            "/api/chat/multimodal",
+            json={
+                "question": question,
+                "image_b64": image_b64,
+                "model_id": model_id,
+            },
+        )
+
     def factory_reset(self) -> dict[str, Any]:
         """Factory reset: clear all AI data (conversations, messages, model registry)."""
         return self.post("/api/factory-reset", json={})

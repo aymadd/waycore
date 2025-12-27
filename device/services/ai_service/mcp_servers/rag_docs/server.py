@@ -74,7 +74,7 @@ def _build_index(store: VectorStore) -> int:
     return total_chunks
 
 
-@server.list_tools()  # type: ignore[misc]
+@server.list_tools()  # type: ignore
 async def list_tools() -> list[Tool]:
     """List available RAG tools."""
     return [
@@ -114,7 +114,7 @@ async def list_tools() -> list[Tool]:
     ]
 
 
-@server.call_tool()  # type: ignore[misc]
+@server.call_tool()  # type: ignore
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Execute a RAG tool.
 

@@ -120,7 +120,7 @@ def _get_mock_pressure() -> dict[str, Any]:
     return {"hPa": 1013.25, "altitude_m": 52.0}
 
 
-@server.list_tools()  # type: ignore[misc]
+@server.list_tools()  # type: ignore
 async def list_tools() -> list[Tool]:
     """List available sensor tools.
 
@@ -219,7 +219,7 @@ async def list_tools() -> list[Tool]:
     ]
 
 
-@server.call_tool()  # type: ignore[misc]
+@server.call_tool()  # type: ignore
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Execute a sensor tool.
 

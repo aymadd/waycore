@@ -23,12 +23,14 @@ RUN poetry config virtualenvs.create false && \
 # Install ML dependencies
 # llama-cpp-python: For GGUF language models (Phi-3, TinyLlama, etc.)
 # Note: Building from source for CPU-only support on any architecture
+# IMPORTANT: Pin numpy<2.0 for tflite-runtime compatibility (numpy 2.x has breaking changes)
 RUN pip install --no-cache-dir \
-    llama-cpp-python==0.2.90 \
-    numpy>=1.24.0
+    "numpy>=1.24.0,<2.0" \
+    llama-cpp-python==0.2.90
 
 # tflite-runtime: For TensorFlow Lite vision models (MobileNetV3)
 # Using official Google package that works on both ARM and x86
+# Note: tflite-runtime 2.14.0 requires numpy<2.0
 RUN pip install --no-cache-dir \
     tflite-runtime==2.14.0 || \
     pip install --no-cache-dir tensorflow-cpu==2.14.0

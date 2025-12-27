@@ -140,7 +140,7 @@ docker/                   # Docker Compose and configs
 | module-manager | 8001 | Module discovery and lifecycle management         |
 | data-logger    | 8002 | Event persistence and retrieval                   |
 | comms-bridge   | 8003 | Radio coordination and TAK gateway                |
-| ai-service     | 8010 | Image classification and Q&A inference            |
+| ai-service     | 8010 | Visual Q&A, image classification, chat inference  |
 
 All services support Unix domain sockets (preferred) and HTTP/JSON APIs.
 

@@ -46,6 +46,19 @@ servers:
     enabled: true
     timeout_seconds: 30
 
+  # OpenAPI Tools server - dynamically generates tools from API specs
+  openapi:
+    command: "python"
+    args: ["-m", "device.services.ai_service.mcp_servers.openapi.server"]
+    description: "Auto-generated tools from Waycore service APIs"
+    enabled: true
+    timeout_seconds: 15
+    # Dangerous operations from OpenAPI tools
+    requires_confirmation:
+      - factory_reset
+      - delete_note
+      - send_mesh_message
+
 # Default settings applied to all servers unless overridden
 defaults:
   timeout_seconds: 10

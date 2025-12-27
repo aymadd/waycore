@@ -46,7 +46,11 @@ Waycore ships with these models pre-configured (download required):
 | Model         | Type     | Size   | Format | Description                            |
 | ------------- | -------- | ------ | ------ | -------------------------------------- |
 | Phi-3 Mini 4K | Language | 2.3 GB | GGUF   | Chat/Q&A, 4-bit quantized (Q4_K_M)     |
-| MobileNetV3   | Vision   | 5 MB   | TFLite | ImageNet classification (1000 classes) |
+| MobileNetV3   | Vision   | 10 MB  | TFLite | ImageNet classification (1000 classes) |
+
+> **Note**: The vision model is used in the multimodal Visual Q&A pipeline. When you
+> attach an image and ask a question, MobileNetV3 first classifies the image, then
+> Phi-3 uses those classifications to answer your question.
 
 ---
 

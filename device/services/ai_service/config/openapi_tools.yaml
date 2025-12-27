@@ -1,0 +1,49 @@
+# OpenAPI Tools Configuration
+#
+# Configuration for the OpenAPI-to-MCP tools bridge.
+# This controls which endpoints are exposed as AI tools.
+
+# Directory containing OpenAPI spec files
+spec_directory: /app/docs/api
+
+# Services to include (all others are excluded)
+# Comment out to include all services
+include_services:
+  - core-daemon
+  - data-logger
+  - comms-bridge
+  - camera-service
+  - module-manager
+
+# Endpoint patterns to exclude (regex)
+# These endpoints will not be exposed as tools
+exclude_patterns:
+  - "^/health$"
+  - "^/metrics"
+  - "^/internal/"
+  - "^/debug/"
+  - "^/docs"
+  - "^/openapi"
+  - "^/redoc"
+
+# Tools that require user confirmation before execution
+# These are typically destructive or sensitive operations
+confirmation_required:
+  - factory_reset
+  - send_mesh_message
+  - delete_note
+  - clear_conversation
+  - delete_all
+  - clear_data
+
+# Rate limits (calls per minute)
+# Prevents excessive API calls
+rate_limits:
+  default: 60
+  send_mesh_message: 10
+  factory_reset: 1
+
+# Request timeouts (seconds)
+timeouts:
+  default: 10.0
+  long_running: 30.0

@@ -71,7 +71,7 @@ def _embed_query(query: str) -> list[float] | None:
     return None
 
 
-@server.list_tools()  # type: ignore[misc]
+@server.list_tools()  # type: ignore
 async def list_tools() -> list[Tool]:
     """List available outdoor knowledge tools."""
     return [
@@ -195,7 +195,7 @@ async def list_tools() -> list[Tool]:
     ]
 
 
-@server.call_tool()  # type: ignore[misc]
+@server.call_tool()  # type: ignore
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Execute an outdoor knowledge tool.
 

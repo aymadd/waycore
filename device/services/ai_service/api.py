@@ -173,6 +173,137 @@ def create_app(service: AIService) -> FastAPI:
         pre = preprocess_for_inference(req)
         return run_inference(req, pre, response_source=service.response_source)
 
+    @app.post("/api/chat/multimodal")
+    async def chat_multimodal(body: dict[str, Any]) -> JSONResponse:
+        """Multimodal chat endpoint combining image + text question.
+
+        Request body:
+            question: str - User's question about the image (optional)
+            image_b64: str - Base64-encoded image (optional)
+            model_id: str - Model to use (default: phi3-mini)
+
+        Supports three modes:
+        1. Image + Question: Two-stage pipeline (vision → LLM)
+        2. Image only: Returns classification results
+        3. Question only: Standard chat (redirects to /api/chat)
+
+        Returns:
+            JSONResponse with response text and metadata
+        """
+        question = str(body.get("question", "")).strip()
+        image_b64 = str(body.get("image_b64", "")).strip()
+        model_id = str(body.get("model_id", "phi3-mini"))
+
+        # Mode 1: Question only → redirect to regular chat
+        if question and not image_b64:
+            return await chat({"question": question, "model_id": model_id})
+
+        # Mode 2: Image only → return classification
+        if image_b64 and not question:
+            req = AIInferenceRequest(
+                source=service.response_source,
+                inference_type=InferenceType.image_classification,
+                model_id="mobilenetv3",
+                input_data={"image_b64": image_b64},
+                options={},
+            )
+            pre = preprocess_for_inference(req)
+            result = run_inference(req, pre, response_source=service.response_source)
+
+            # Format classification results
+            if result.success and result.results:
+                lines = ["**Image Classification Results:**\n"]
+                for r in result.results[:5]:
+                    pct = f"{r.confidence * 100:.1f}%"
+                    lines.append(f"• **{r.label}**: {pct}")
+                response_text = "\n".join(lines)
+            else:
+                response_text = "Could not classify the image."
+
+            return JSONResponse(
+                {
+                    "success": True,
+                    "response": response_text,
+                    "results": [{"label": response_text}],
+                    "mode": "classification_only",
+                }
+            )
+
+        # Mode 3: Image + Question → two-stage multimodal pipeline
+        if not image_b64:
+            return JSONResponse(
+                {"error": "No image or question provided"},
+                status_code=400,
+            )
+
+        # Stage 1: Get image classification results
+        vision_context = ""
+        try:
+            req = AIInferenceRequest(
+                source=service.response_source,
+                inference_type=InferenceType.image_classification,
+                model_id="mobilenetv3",
+                input_data={"image_b64": image_b64},
+                options={},
+            )
+            pre = preprocess_for_inference(req)
+            vision_result = run_inference(req, pre, response_source=service.response_source)
+
+            if vision_result.success and vision_result.results:
+                lines = ["Image analysis results:"]
+                for r in vision_result.results[:5]:
+                    pct = f"{r.confidence * 100:.1f}%"
+                    lines.append(f"- {r.label}: {pct}")
+                vision_context = "\n".join(lines)
+            else:
+                vision_context = "Image analysis: Unable to identify contents."
+        except Exception as e:
+            logger.warning(f"Vision analysis failed: {e}")
+            vision_context = "Image analysis: Analysis failed."
+
+        # Stage 2: Generate LLM response with vision context
+        multimodal_prompt = f"""The user has attached an image and asked a question about it.
+
+{vision_context}
+
+User's question: {question}
+
+Based on the image analysis and your knowledge, provide a helpful answer.
+If the image appears to show plants, mushrooms, or wildlife:
+- Mention any safety considerations
+- Recommend expert verification if identification is uncertain
+- Err on the side of caution for edibility questions
+
+Answer:"""
+
+        # Use direct inference with the multimodal prompt
+        qa_req = AIInferenceRequest(
+            source=service.response_source,
+            inference_type=InferenceType.qa,
+            model_id=model_id,
+            input_data={"question": multimodal_prompt, "context": ""},
+            options={},
+        )
+        qa_pre = preprocess_for_inference(qa_req)
+        qa_result = run_inference(qa_req, qa_pre, response_source=service.response_source)
+
+        response_text = ""
+        if qa_result.success and qa_result.results:
+            response_text = qa_result.results[0].label
+        else:
+            # Fallback to vision context if LLM fails
+            response_text = f"Based on the image:\n{vision_context}"
+
+        return JSONResponse(
+            {
+                "success": True,
+                "response": response_text,
+                "results": [{"label": response_text}],
+                "vision_context": vision_context,
+                "mode": "multimodal",
+            }
+        )
+
     @app.post("/api/chat")
     async def chat(body: dict[str, Any]) -> JSONResponse:
         """Chat endpoint with optional MCP tool support.

@@ -188,6 +188,112 @@ class ImageClassifyWorker(QRunnable):
         return {"success": True, "results": results}
 
 
+class MultimodalChatWorker(QRunnable):
+    """
+    Worker for running multimodal (image + question) chat in background thread.
+    """
+
+    class Signals(QObject):
+        """Signals for worker communication."""
+
+        finished = Signal(dict)  # Result dict
+        error = Signal(str)  # Error message
+
+    def __init__(
+        self,
+        client: AIServiceClient | None,
+        question: str,
+        image_b64: str,
+        model_id: str,
+        backend_available: bool,
+    ) -> None:
+        super().__init__()
+        self.signals = self.Signals()
+        self._client = client
+        self._question = question
+        self._image_b64 = image_b64
+        self._model_id = model_id
+        self._backend_available = backend_available
+        self.setAutoDelete(True)
+
+    def run(self) -> None:
+        """Execute multimodal chat inference in background thread."""
+        try:
+            if not self._backend_available or not self._client:
+                result = self._get_mock_response()
+            else:
+                api_result = self._client.chat_multimodal(
+                    question=self._question,
+                    image_b64=self._image_b64,
+                    model_id=self._model_id,
+                )
+
+                if api_result.get("success", True):
+                    response = api_result.get("response", "")
+                    result = {
+                        "success": True,
+                        "answer": response,
+                        "vision_context": api_result.get("vision_context", ""),
+                        "mode": api_result.get("mode", "multimodal"),
+                    }
+                else:
+                    error_msg = api_result.get("error", "Unknown error")
+                    result = {"success": False, "error": error_msg}
+
+            self.signals.finished.emit(result)
+
+        except Exception as e:
+            logger.error(f"Multimodal chat worker error: {e}")
+            self.signals.error.emit(str(e))
+
+    def _get_mock_response(self) -> dict[str, Any]:
+        """Generate a mock multimodal response."""
+        import time
+
+        time.sleep(0.8)
+
+        # Build mock vision context
+        mock_labels = ["Plant", "Leaf", "Vegetation", "Nature"]
+        vision_lines = ["Image analysis results:"]
+        for i, label in enumerate(mock_labels):
+            conf = 0.9 - (i * 0.1)
+            vision_lines.append(f"- {label}: {conf * 100:.1f}%")
+        vision_context = "\n".join(vision_lines)
+
+        # Build mock response based on question
+        question_lower = self._question.lower()
+        if "edible" in question_lower or "eat" in question_lower:
+            answer = (
+                "Based on the image analysis, this appears to be vegetation "
+                "(confidence: ~90%).\n\n"
+                "⚠️ **Safety Warning**: I cannot definitively identify this plant. "
+                "Many edible plants have toxic look-alikes. Please consult a local "
+                "expert or use a dedicated plant identification guide before consuming "
+                "any wild plants."
+            )
+        elif "plant" in question_lower or "flower" in question_lower:
+            answer = (
+                f"Based on the image analysis:\n{vision_context}\n\n"
+                f"This appears to be a type of plant or vegetation. For accurate "
+                f"identification, consider the leaf shape, color, and any flowers or "
+                f"fruits visible."
+            )
+        else:
+            answer = (
+                f"Based on the image analysis:\n{vision_context}\n\n"
+                f"You asked: '{self._question}'\n\n"
+                f"This is a mock response. When connected to the AI service, "
+                f"I'll provide more detailed answers about the image."
+            )
+
+        return {
+            "success": True,
+            "answer": answer,
+            "vision_context": vision_context,
+            "mode": "multimodal",
+        }
+
+
 # Database path for local storage
 AI_DB_PATH = os.getenv("AI_DB_PATH", str(Path.home() / ".waycore" / "ai.sqlite3"))
 
@@ -423,6 +529,7 @@ class AIBridge(QObject):
     currentConversationChanged = Signal()
     chatCompleted = Signal(dict)  # Emitted when async chat completes
     imageClassifyCompleted = Signal(dict)  # Emitted when async image classify completes
+    multimodalChatCompleted = Signal(dict)  # Emitted when async multimodal chat completes
 
     # MCP Tool signals
     toolConfirmationRequired = Signal(dict)  # Emitted when tool needs user confirmation
@@ -954,6 +1061,154 @@ class AIBridge(QObject):
             logger.error(f"Failed to load image from {file_path}: {e}")
             self._set_error(f"Failed to load image: {e}")
             self.imageClassifyCompleted.emit({"success": False, "error": str(e)})
+
+    # Slots - Multimodal Chat (Image + Question)
+
+    @Slot(str, str)  # type: ignore[arg-type]
+    def sendMultimodalChat(self, question: str, image_b64: str) -> None:
+        """
+        Send a multimodal chat message with image and question.
+
+        Creates a new conversation if none exists.
+        Runs inference in background thread to keep UI responsive.
+        Emits multimodalChatCompleted signal when done.
+
+        Args:
+            question: User's question about the image
+            image_b64: Base64-encoded image data
+        """
+        if not question.strip() and not image_b64.strip():
+            self.multimodalChatCompleted.emit(
+                {"success": False, "error": "No question or image provided"}
+            )
+            return
+
+        self._set_loading(True)
+        self._clear_error()
+
+        # Ensure we have a conversation
+        if not self._current_conversation_id:
+            q_preview = question[:40] + "..." if len(question) > 40 else (question or "Image Q&A")
+            title = "🖼️ " + q_preview
+            self._current_conversation_id = self._create_conversation_with_sync(title)
+            self.currentConversationChanged.emit()
+            self.conversationsChanged.emit()
+
+        # Add user message immediately
+        timestamp = self._get_timestamp()
+        user_content = question if question else "📷 [Image for analysis]"
+        if image_b64:
+            user_content = f"📷 {question}" if question else "📷 [Image for analysis]"
+
+        user_msg = {
+            "role": "user",
+            "content": user_content,
+            "timestamp": timestamp,
+            "has_image": bool(image_b64),
+        }
+        self._messages.append(user_msg)
+        self.messagesChanged.emit()
+
+        # Persist user message
+        self._add_message_with_sync(self._current_conversation_id, "user", user_content)
+
+        # Auto-title conversation from first message
+        if self._db.get_message_count(self._current_conversation_id) == 1:
+            q_preview = question[:40] + "..." if len(question) > 40 else (question or "Image Q&A")
+            title = "🖼️ " + q_preview
+            self._db.update_conversation(self._current_conversation_id, title=title)
+            if self._backend_available and self._client:
+                try:
+                    self._client.update_conversation(self._current_conversation_id, title=title)
+                except Exception as e:
+                    logger.debug(f"Failed to sync conversation title: {e}")
+            self.conversationsChanged.emit()
+
+        # Run multimodal inference in background thread
+        worker = MultimodalChatWorker(
+            client=self._client,
+            question=question,
+            image_b64=image_b64,
+            model_id=self._model_id,
+            backend_available=self._backend_available,
+        )
+        worker.signals.finished.connect(self._on_multimodal_chat_completed)
+        worker.signals.error.connect(self._on_multimodal_chat_error)
+        self._thread_pool.start(worker)
+
+    def _on_multimodal_chat_completed(self, result: dict[str, Any]) -> None:
+        """Handle completed multimodal chat inference (called on main thread)."""
+        self._set_loading(False)
+
+        if result.get("success"):
+            # Add assistant message
+            answer = result.get("answer", "")
+            assistant_msg = {
+                "role": "assistant",
+                "content": answer,
+                "timestamp": self._get_timestamp(),
+                "vision_context": result.get("vision_context", ""),
+            }
+            self._messages.append(assistant_msg)
+            self.messagesChanged.emit()
+
+            # Persist assistant message
+            if self._current_conversation_id:
+                self._add_message_with_sync(self._current_conversation_id, "assistant", answer)
+        else:
+            self._set_error(result.get("error", "Unknown error"))
+
+        self.multimodalChatCompleted.emit(result)
+
+    def _on_multimodal_chat_error(self, error_msg: str) -> None:
+        """Handle multimodal chat error (called on main thread)."""
+        self._set_loading(False)
+        self._set_error(error_msg)
+        self.multimodalChatCompleted.emit({"success": False, "error": error_msg})
+
+    @Slot(str, str)  # type: ignore[arg-type]
+    def sendMultimodalChatFromPath(self, question: str, file_path: str) -> None:
+        """
+        Send a multimodal chat with image loaded from file path.
+
+        Args:
+            question: User's question about the image
+            file_path: Path to image file (can be file:// URL)
+
+        Emits multimodalChatCompleted signal when done.
+        """
+        # Handle file:// URLs (from Qt FileDialog)
+        if file_path.startswith("file://"):
+            file_path = file_path[7:]
+
+        try:
+            path = Path(file_path)
+            if not path.exists():
+                self._set_error(f"File not found: {file_path}")
+                self.multimodalChatCompleted.emit({"success": False, "error": "File not found"})
+                return
+
+            # Check file size (limit to 10MB)
+            file_size = path.stat().st_size
+            if file_size > 10 * 1024 * 1024:
+                self._set_error("Image file too large (max 10MB)")
+                self.multimodalChatCompleted.emit(
+                    {"success": False, "error": "Image file too large (max 10MB)"}
+                )
+                return
+
+            # Read and encode image
+            with open(path, "rb") as f:
+                image_data = f.read()
+            image_b64 = base64.b64encode(image_data).decode("utf-8")
+
+            # Call the multimodal chat
+            self.sendMultimodalChat(question, image_b64)
+
+        except Exception as e:
+            logger.error(f"Failed to load image from {file_path}: {e}")
+            self._set_error(f"Failed to load image: {e}")
+            self.multimodalChatCompleted.emit({"success": False, "error": str(e)})
 
     # Private helpers
 
