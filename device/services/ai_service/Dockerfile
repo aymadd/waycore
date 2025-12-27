@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir poetry==2.2.1
 
 # Copy and install Python dependencies
-COPY pyproject.toml /app/
+COPY pyproject.toml poetry.lock /app/
 RUN poetry config virtualenvs.create false && \
     poetry install --only main --no-interaction --no-ansi --no-root
 

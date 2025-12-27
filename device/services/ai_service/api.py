@@ -116,6 +116,30 @@ def create_app(service: AIService) -> FastAPI:
             return {"status": "ok"}
         raise HTTPException(status_code=503, detail="not ready")
 
+    @app.get("/debug/agent")
+    async def debug_agent() -> JSONResponse:
+        """Debug endpoint to check agent and MCP status."""
+        mcp_info: dict[str, Any] = {"connected": False, "tools": []}
+        agent_info: dict[str, Any] = {"initialized": False, "has_llm": False}
+
+        if service.mcp:
+            mcp_info["connected"] = service.mcp.is_connected
+            mcp_info["tools"] = [
+                {"name": name, "server": server} for name, (server, _) in service.mcp._tools.items()
+            ]
+
+        if service.agent:
+            agent_info["initialized"] = True
+            agent_info["has_llm"] = service.agent.llm_generate is not None
+            agent_info["has_final_response"] = service.agent.llm_final_response is not None
+
+        return JSONResponse(
+            {
+                "mcp": mcp_info,
+                "agent": agent_info,
+            }
+        )
+
     # --- Inference Endpoints ---
 
     @app.post("/api/inference")
@@ -150,9 +174,84 @@ def create_app(service: AIService) -> FastAPI:
         return run_inference(req, pre, response_source=service.response_source)
 
     @app.post("/api/chat")
-    async def chat(body: dict[str, Any]) -> AIInferenceResponse:
-        model_id = str(body.get("model_id", "phi3-mini"))
+    async def chat(body: dict[str, Any]) -> JSONResponse:
+        """Chat endpoint with optional MCP tool support.
+
+        Request body:
+            question: str - The user's question
+            context: str - Optional context
+            model_id: str - Model to use (default: phi3-mini)
+            use_tools: bool - Enable MCP tools (default: true)
+            conversation_history: list - Previous messages
+
+        Returns:
+            JSONResponse with response text and tool information
+        """
         question = str(body.get("question", "")).strip()
+        use_tools = body.get("use_tools", True)
+        conversation_history = body.get("conversation_history", [])
+
+        if not question:
+            return JSONResponse(
+                {"error": "No question provided"},
+                status_code=400,
+            )
+
+        # Try agentic approach with tools if available
+        if use_tools and service.agent:
+            try:
+                logger.info(f"Using agentic chat for: {question}")
+                response_content = ""
+                tool_calls_made: list[dict[str, Any]] = []
+
+                async for agent_response in service.agent.process_message(
+                    question, conversation_history
+                ):
+                    response_content = agent_response.content
+                    logger.info(f"Agent response: {response_content[:100]}...")
+
+                    if agent_response.tool_calls:
+                        tool_calls_made = [
+                            {"name": tc.name, "arguments": tc.arguments}
+                            for tc in agent_response.tool_calls
+                        ]
+                        logger.info(f"Tool calls made: {tool_calls_made}")
+
+                    if agent_response.requires_confirmation:
+                        # Return confirmation request
+                        return JSONResponse(
+                            {
+                                "success": True,
+                                "results": [{"label": agent_response.content}],
+                                "response": agent_response.content,
+                                "requires_confirmation": [
+                                    {"name": tc.name, "arguments": tc.arguments}
+                                    for tc in agent_response.requires_confirmation
+                                ],
+                                "is_final": False,
+                            }
+                        )
+
+                return JSONResponse(
+                    {
+                        "success": True,
+                        "results": [{"label": response_content}],
+                        "response": response_content,
+                        "tool_calls": tool_calls_made,
+                        "is_final": True,
+                        "mode": "agentic",
+                    }
+                )
+
+            except Exception as e:
+                logger.error(f"Agentic chat failed, falling back to direct: {e}")
+                import traceback
+
+                logger.error(traceback.format_exc())
+                # Fall through to direct inference
+
+        # Direct inference without tools
+        model_id = str(body.get("model_id", "phi3-mini"))
         context = body.get("context", "")
         req = AIInferenceRequest(
             source=service.response_source,
@@ -162,7 +261,23 @@ def create_app(service: AIService) -> FastAPI:
             options={},
         )
         pre = preprocess_for_inference(req)
-        return run_inference(req, pre, response_source=service.response_source)
+        result = run_inference(req, pre, response_source=service.response_source)
+
+        # Extract response text
+        response_text = ""
+        if result.results and len(result.results) > 0:
+            response_text = result.results[0].label
+
+        return JSONResponse(
+            {
+                "success": True,
+                "results": [{"label": response_text}],
+                "response": response_text,
+                "tool_calls": [],
+                "is_final": True,
+                "mode": "direct",
+            }
+        )
 
     # --- Model Management Endpoints ---
 

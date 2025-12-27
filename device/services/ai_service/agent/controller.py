@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -14,6 +14,10 @@ if TYPE_CHECKING:
     from device.services.ai_service.mcp.manager import MCPManager
 
 logger = logging.getLogger(__name__)
+
+# Type alias for LLM generation function
+LLMGenerateFunc = Callable[[str, str, list[dict[str, str]] | None], str]
+LLMFinalResponseFunc = Callable[[str, str, list[dict[str, str]] | None], str]
 
 
 @dataclass
@@ -63,16 +67,19 @@ class AgentController:
     def __init__(
         self,
         mcp_manager: MCPManager,
-        llm_generate: Any = None,
+        llm_generate: LLMGenerateFunc | None = None,
+        llm_final_response: LLMFinalResponseFunc | None = None,
     ) -> None:
         """Initialize the agent controller.
 
         Args:
             mcp_manager: MCP manager for tool access.
-            llm_generate: Function to generate LLM responses (optional).
+            llm_generate: Function to generate LLM responses with tool awareness.
+            llm_final_response: Function to generate final response after tools.
         """
         self.mcp = mcp_manager
         self.llm_generate = llm_generate
+        self.llm_final_response = llm_final_response
         self._pending_confirmations: dict[str, ToolCall] = {}
 
     def get_tool_system_prompt(self) -> str:
@@ -91,9 +98,10 @@ class AgentController:
     ) -> AsyncIterator[AgentResponse]:
         """Process a user message, potentially using tools.
 
-        This is an async generator that yields AgentResponse objects as the
-        agent works through the query. This allows for streaming updates
-        and handling confirmation requests.
+        This uses a hybrid approach:
+        1. First, detect if any tools should be called based on keywords
+        2. Execute detected tools
+        3. Use LLM to format final response with tool results
 
         Args:
             user_message: The user's message/query.
@@ -103,22 +111,13 @@ class AgentController:
             AgentResponse objects with content and/or tool information.
         """
         messages = list(conversation_history or [])
-        messages.append({"role": "user", "content": user_message})
+        user_lower = user_message.lower()
 
-        for iteration in range(self.MAX_ITERATIONS):
-            logger.debug(f"Agent iteration {iteration + 1}/{self.MAX_ITERATIONS}")
+        # Hybrid approach: First try keyword-based tool detection
+        tool_calls = self._detect_tools_from_keywords(user_lower)
 
-            # Check if we should try to extract tool calls from the user message
-            # In a real implementation, this would use the LLM to decide
-            tool_calls = self._extract_tool_calls_from_text(user_message)
-
-            if not tool_calls:
-                # No tools detected, this is a direct response
-                yield AgentResponse(
-                    content="",  # LLM would generate this
-                    is_final=True,
-                )
-                return
+        if tool_calls:
+            logger.info(f"Detected tools from keywords: {[tc.name for tc in tool_calls]}")
 
             # Check for tools requiring confirmation
             needs_confirmation = [
@@ -132,32 +131,166 @@ class AgentController:
                     content="I need your permission to proceed with the following action(s).",
                     requires_confirmation=needs_confirmation,
                 )
-                # Store pending confirmations
                 for tc in needs_confirmation:
                     self._pending_confirmations[tc.name] = tc
-                return  # Wait for user confirmation
+                return
 
-            # Execute tools that don't need confirmation
+            # Execute tools
             if auto_execute:
                 tool_results = await self._execute_tools(auto_execute)
 
-                # Format results for context
+                # Format results
                 result_text = "\n\n".join(
                     format_tool_result(r.tool, r.result, r.error) for r in tool_results
                 )
 
+                # Generate final response with LLM if available
+                if self.llm_final_response:
+                    final_response = self.llm_final_response(user_message, result_text, messages)
+                else:
+                    final_response = result_text
+
                 yield AgentResponse(
-                    content=result_text,
+                    content=final_response,
                     tool_calls=auto_execute,
                     is_final=True,
                 )
                 return
 
-        # Max iterations reached
-        yield AgentResponse(
-            content="I was unable to complete this request. Please try a simpler question.",
-            is_final=True,
-        )
+        # No tools detected - fall back to LLM for general response
+        if self.llm_generate:
+            tool_prompt = self.get_tool_system_prompt()
+            llm_response = self.llm_generate(user_message, tool_prompt, messages)
+
+            # Try to extract tool calls from LLM response (for advanced usage)
+            llm_tool_calls = self._extract_tool_calls_from_text(llm_response)
+
+            if llm_tool_calls:
+                # LLM decided to use tools
+                tool_results = await self._execute_tools(llm_tool_calls)
+                result_text = "\n\n".join(
+                    format_tool_result(r.tool, r.result, r.error) for r in tool_results
+                )
+
+                if self.llm_final_response:
+                    final_response = self.llm_final_response(user_message, result_text, messages)
+                else:
+                    final_response = result_text
+
+                yield AgentResponse(
+                    content=final_response,
+                    tool_calls=llm_tool_calls,
+                    is_final=True,
+                )
+                return
+
+            # No tools, direct response
+            yield AgentResponse(
+                content=llm_response,
+                is_final=True,
+            )
+        else:
+            yield AgentResponse(
+                content="AI model not available for processing.",
+                is_final=True,
+            )
+
+    def _detect_tools_from_keywords(self, user_message: str) -> list[ToolCall]:
+        """Detect which tools to call based on keywords in user message.
+
+        This provides reliable tool detection for smaller LLMs that struggle
+        with generating proper JSON tool calls.
+
+        Args:
+            user_message: Lowercase user message.
+
+        Returns:
+            List of ToolCall objects to execute.
+        """
+        tools: list[ToolCall] = []
+
+        # Temperature keywords
+        if any(kw in user_message for kw in ["temperature", "temp", "how hot", "how cold"]):
+            tools.append(ToolCall(name="get_temperature", arguments={}))
+
+        # Location keywords
+        if any(kw in user_message for kw in ["where am i", "location", "gps", "coordinates"]):
+            tools.append(ToolCall(name="get_location", arguments={}))
+
+        # Compass keywords
+        if any(
+            kw in user_message for kw in ["compass", "heading", "direction", "facing", "which way"]
+        ):
+            tools.append(ToolCall(name="get_compass_heading", arguments={}))
+
+        # Altitude keywords
+        if any(kw in user_message for kw in ["altitude", "elevation", "how high"]):
+            tools.append(ToolCall(name="get_altitude", arguments={}))
+
+        # Battery keywords
+        if any(kw in user_message for kw in ["battery", "power", "charge"]):
+            tools.append(ToolCall(name="get_battery_status", arguments={}))
+
+        # Time keywords
+        if any(kw in user_message for kw in ["what time", "current time", "time is it"]):
+            tools.append(ToolCall(name="get_device_time", arguments={}))
+
+        # All sensors
+        if any(kw in user_message for kw in ["all sensor", "all reading", "everything"]):
+            tools.append(ToolCall(name="get_all_sensors", arguments={}))
+
+        # Weather conditions
+        if any(kw in user_message for kw in ["weather", "conditions", "pressure"]):
+            tools.append(ToolCall(name="get_weather_conditions", arguments={}))
+
+        # Notes keywords
+        if any(kw in user_message for kw in ["create note", "save note", "write note"]):
+            # Extract note content - simple heuristic
+            tools.append(ToolCall(name="create_note", arguments={}))
+        elif any(kw in user_message for kw in ["my notes", "list notes", "show notes"]):
+            tools.append(ToolCall(name="search_notes", arguments={"query": ""}))
+
+        # Mesh keywords
+        if any(kw in user_message for kw in ["mesh", "nodes", "who is on"]):
+            tools.append(ToolCall(name="get_mesh_nodes", arguments={}))
+
+        # Survival knowledge keywords
+        if any(
+            kw in user_message
+            for kw in [
+                "fire",
+                "shelter",
+                "water purif",
+                "survival",
+                "first aid",
+                "snake bite",
+                "hypothermia",
+                "dehydration",
+            ]
+        ):
+            # Extract search query
+            tools.append(
+                ToolCall(name="search_survival_knowledge", arguments={"query": user_message})
+            )
+
+        # Knots
+        if any(kw in user_message for kw in ["knot", "tie a", "bowline", "clove"]):
+            tools.append(ToolCall(name="lookup_knot", arguments={"name": user_message}))
+
+        # Plants
+        if any(
+            kw in user_message for kw in ["plant", "edible", "poisonous", "identify", "safe to eat"]
+        ):
+            tools.append(ToolCall(name="identify_plant", arguments={"description": user_message}))
+
+        # Documentation
+        if any(
+            kw in user_message
+            for kw in ["how do i use", "how to use", "waycore", "app", "settings"]
+        ):
+            tools.append(ToolCall(name="search_documentation", arguments={"query": user_message}))
+
+        return tools
 
     async def confirm_tool(self, tool_name: str) -> ToolResult:
         """Execute a previously pending tool after user confirmation.

@@ -4,6 +4,9 @@ This module provides vector storage and similarity search capabilities
 using ChromaDB for efficient document retrieval.
 """
 
+# mypy: disable-error-code="arg-type,list-item"
+# ChromaDB's type stubs have compatibility issues with list types
+
 from __future__ import annotations
 
 import logging

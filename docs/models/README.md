@@ -516,9 +516,89 @@ curl -X POST http://localhost:8010/api/models/rescan
 
 ---
 
+## RAG Knowledge Base Setup
+
+In addition to AI models, Waycore uses a RAG (Retrieval-Augmented Generation)
+knowledge base for offline access to survival, navigation, first aid, and other
+outdoor expertise.
+
+### Downloading RAG Sources
+
+```bash
+# Download all public domain knowledge sources (~150MB)
+./scripts/download-rag-sources.sh
+
+# Verify downloaded files
+./scripts/verify-rag-sources.sh
+
+# Check what was downloaded
+ls -la data/raw/
+```
+
+### Source Categories
+
+| Category   | Sources                         | Size    | Content                     |
+| ---------- | ------------------------------- | ------- | --------------------------- |
+| Survival   | FM 21-76, Ranger Handbook       | ~50 MB  | Shelter, fire, water, food  |
+| Navigation | FM 3-25.26, USGS Topo Symbols   | ~25 MB  | Map reading, compass, GPS   |
+| First Aid  | FM 4-25.11, BSA Wilderness FA   | ~15 MB  | Trauma, emergencies         |
+| Knots      | FM 5-125, Army Mountain Warfare | ~10 MB  | Knots, rigging, lashing     |
+| Weather    | NOAA Cloud Chart, Spotter Guide | ~5 MB   | Cloud ID, storm prediction  |
+| Plants     | PFAF, USDA (optional)           | ~50 MB  | Edibility, identification   |
+
+### Building the Knowledge Index
+
+After downloading sources, build the searchable index:
+
+```bash
+# Build the RAG index (takes ~5-10 minutes on RPi5)
+python scripts/build-rag-index.py
+
+# Check index stats
+python -c "
+from device.services.ai_service.rag.store import HybridKnowledgeStore
+store = HybridKnowledgeStore()
+store.load_index()
+print(store.get_stats())
+"
+```
+
+### Storage Requirements
+
+| Component      | Size (est.) | Notes                   |
+| -------------- | ----------- | ----------------------- |
+| Raw PDFs       | ~150 MB     | Downloaded sources      |
+| SQLite + FTS5  | ~70 MB      | Keyword search index    |
+| Vector Index   | ~80 MB      | Semantic search (Hnswlib) |
+| **Total**      | **~300 MB** | One-time setup          |
+
+### Source Manifest
+
+All sources are documented in:
+```
+device/services/ai_service/rag/sources.yaml
+```
+
+This file includes URLs, licenses, and processing configuration.
+
+### Updating Knowledge
+
+To refresh the knowledge base (after new sources are added):
+
+```bash
+# Re-download sources (skips existing files)
+./scripts/download-rag-sources.sh
+
+# Rebuild the index
+python scripts/build-rag-index.py --rebuild
+```
+
+---
+
 ## See Also
 
 - [AI Model Strategy](../../local_plan/11-ai-model-strategy.md) - Technical
   architecture
 - [AI Service API](../api/ai-service.openapi.json) - Full OpenAPI specification
 - [Local Development](../local_dev_docker.md) - Docker setup guide
+- [RAG Requirements](../../local_plan/waycore-rag-requirements.md) - RAG architecture

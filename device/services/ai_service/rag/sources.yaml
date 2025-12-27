@@ -1,0 +1,279 @@
+# Waycore RAG Knowledge Base - Source Manifest
+#
+# This file defines all data sources for the outdoor knowledge RAG system.
+# Sources are organized by category and include license information.
+#
+# License Types:
+#   - public_domain: US Government publications, free to use
+#   - cc_by: Creative Commons Attribution
+#   - cc_by_nc_sa: Creative Commons Attribution-NonCommercial-ShareAlike
+#   - educational: Educational use permitted
+
+version: "1.0"
+updated: "2024-12-27"
+
+# Base directory for raw downloads
+raw_data_dir: "data/raw"
+
+# Processed data directory
+processed_dir: "data/outdoor"
+
+sources:
+  # ============================================================================
+  # SURVIVAL MANUALS - US Military (Public Domain)
+  # ============================================================================
+  survival:
+    - id: fm21-76
+      name: "FM 21-76 Survival Manual"
+      url: "https://archive.org/download/Fm21-76SurvivalManual/FM21-76_SurvivalManual.pdf"
+      filename: "FM21-76_Survival.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "US Government publication"
+      category: survival
+      subcategories:
+        - shelter
+        - fire
+        - water
+        - food
+        - navigation
+        - signaling
+      priority: 1
+      estimated_entries: 200
+
+    - id: fm21-76-1
+      name: "FM 21-76-1 Survival, Evasion & Recovery"
+      url: "https://irp.fas.org/doddir/army/fm21-76-1.pdf"
+      filename: "FM21-76-1_Evasion.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "US Government publication"
+      category: survival
+      subcategories:
+        - evasion
+        - recovery
+        - signaling
+      priority: 1
+      estimated_entries: 150
+
+    - id: ranger-handbook
+      name: "Army Ranger Handbook (SH 21-76)"
+      url: "https://archive.org/download/ranger-handbook-sh-21-76/ranger-handbook-sh-21-76.pdf"
+      filename: "RangerHandbook.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "US Government publication"
+      category: survival
+      subcategories:
+        - tactics
+        - navigation
+        - survival
+      priority: 1
+      estimated_entries: 300
+
+  # ============================================================================
+  # NAVIGATION - US Military & Government (Public Domain)
+  # ============================================================================
+  navigation:
+    - id: fm3-25-26
+      name: "FM 3-25.26 Map Reading & Land Navigation"
+      url: "https://irp.fas.org/doddir/army/fm3-25-26.pdf"
+      filename: "FM3-25.26_MapReading.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "US Government publication"
+      category: navigation
+      subcategories:
+        - map_reading
+        - compass
+        - terrain_association
+        - gps
+      priority: 1
+      estimated_entries: 250
+
+    - id: usgs-topo-symbols
+      name: "USGS Topographic Map Symbols"
+      url: "https://pubs.usgs.gov/gip/TopographicMapSymbols/topomapsymbols.pdf"
+      filename: "USGS_TopoSymbols.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "USGS publication"
+      category: navigation
+      subcategories:
+        - map_symbols
+        - topography
+      priority: 2
+      estimated_entries: 100
+
+  # ============================================================================
+  # FIRST AID - Military & Educational (Public Domain / Educational)
+  # ============================================================================
+  first_aid:
+    - id: fm4-25-11
+      name: "FM 4-25.11 First Aid"
+      url: "https://irp.fas.org/doddir/army/fm4-25-11.pdf"
+      filename: "FM4-25.11_FirstAid.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "US Government publication"
+      category: first_aid
+      subcategories:
+        - trauma
+        - bleeding
+        - fractures
+        - burns
+        - environmental
+      priority: 1
+      estimated_entries: 200
+      safety_level: warning
+      safety_note: "Not a substitute for professional medical care"
+
+    - id: bsa-wilderness-first-aid
+      name: "BSA Wilderness First Aid"
+      url: "https://filestore.scouting.org/filestore/pdf/680-008.pdf"
+      filename: "BSA_WildernessFirstAid.pdf"
+      format: pdf
+      license: educational
+      license_note: "BSA educational material"
+      category: first_aid
+      subcategories:
+        - wilderness_medicine
+        - emergency_response
+      priority: 2
+      estimated_entries: 150
+      safety_level: warning
+      safety_note: "Educational purposes only"
+
+  # ============================================================================
+  # KNOTS & RIGGING - US Military (Public Domain)
+  # ============================================================================
+  knots:
+    - id: fm5-125
+      name: "FM 5-125 Rigging"
+      url: "https://www.globalsecurity.org/military/library/policy/army/fm/5-125/fm5-125.pdf"
+      filename: "FM5-125_Rigging.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "US Government publication"
+      category: knots
+      subcategories:
+        - knots
+        - lashing
+        - rigging
+      priority: 1
+      estimated_entries: 100
+
+    - id: amws-knots
+      name: "Army Mountain Warfare Knot Guide"
+      url: "https://www.benning.army.mil/infantry/amws/content/pdf/Knot%20Guide.pdf"
+      filename: "Army_MountainWarfare_Knots.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "US Government publication"
+      category: knots
+      subcategories:
+        - climbing_knots
+        - rescue_knots
+      priority: 2
+      estimated_entries: 50
+
+  # ============================================================================
+  # WEATHER - NOAA/NWS (Public Domain)
+  # ============================================================================
+  weather:
+    - id: noaa-cloud-chart
+      name: "NOAA Cloud Chart"
+      url: "https://www.weather.gov/media/owlie/cloud_chart.pdf"
+      filename: "NOAA_CloudChart.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "NOAA publication"
+      category: weather
+      subcategories:
+        - clouds
+        - weather_prediction
+      priority: 1
+      estimated_entries: 20
+
+    - id: nws-spotter-guide
+      name: "NWS Weather Spotter Guide"
+      url: "https://www.weather.gov/media/bis/Spotter_Guide.pdf"
+      filename: "NWS_SpotterGuide.pdf"
+      format: pdf
+      license: public_domain
+      license_note: "NWS publication"
+      category: weather
+      subcategories:
+        - storm_spotting
+        - severe_weather
+      priority: 1
+      estimated_entries: 50
+
+  # ============================================================================
+  # PLANTS & FORAGING - Various (CC / API)
+  # ============================================================================
+  plants:
+    - id: pfaf
+      name: "Plants For A Future Database"
+      url: "https://pfaf.org/"
+      format: json
+      license: cc_by_nc_sa
+      license_note: "Requires scraping or manual export"
+      category: plants
+      subcategories:
+        - edibility
+        - medicinal
+        - identification
+      priority: 2
+      estimated_entries: 5000
+      safety_level: danger
+      safety_note: "Expert verification required for plant identification"
+      notes: "Requires manual data export or scraping"
+
+    - id: usda-plants
+      name: "USDA Plants Database"
+      url: "https://plants.usda.gov/"
+      format: csv
+      license: public_domain
+      license_note: "US Government database"
+      category: plants
+      subcategories:
+        - native_plants
+        - distribution
+      priority: 2
+      estimated_entries: 1000
+      safety_level: danger
+      safety_note: "Expert verification required"
+      notes: "Data can be exported from USDA website"
+
+# ============================================================================
+# Processing Configuration
+# ============================================================================
+processing:
+  # Chunk settings for PDF parsing
+  chunk_size: 500  # words
+  chunk_overlap: 50  # words
+
+  # Embedding settings
+  embedding_model: "all-MiniLM-L6-v2"
+  embedding_dimension: 384
+
+  # Safety defaults by category
+  default_safety:
+    survival: safe
+    navigation: safe
+    first_aid: warning
+    knots: safe
+    weather: safe
+    plants: danger
+    wildlife: danger
+
+# ============================================================================
+# Statistics Estimates
+# ============================================================================
+estimates:
+  total_sources: 12
+  total_entries: 7000
+  raw_size_mb: 150
+  processed_size_mb: 170
+  build_time_minutes: 7

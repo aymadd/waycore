@@ -6,22 +6,30 @@ from typing import Any
 
 # Template for describing tools to the LLM
 TOOL_DESCRIPTION_TEMPLATE = """
-## Available Tools
+## TOOLS - USE THESE TO GET REAL DATA
 
-You have access to the following tools. To use a tool, respond with a JSON object:
+You MUST use tools to get real device data. Do NOT guess or say you don't have access.
 
-```json
-{{"tool": "tool_name", "arguments": {{"arg1": "value1", "arg2": "value2"}}}}
-```
+When the user asks about temperature, location, battery, compass, time, notes, or
+any sensor data, you MUST respond with a tool call in this exact JSON format:
 
-### Tools:
+{{"tool": "tool_name", "arguments": {{}}}}
+
+### Available Tools:
 {tools_list}
 
-### Important:
-- Only use tools when necessary to answer the user's question
-- Always wait for tool results before providing your final answer
-- If a tool fails, explain the issue and try an alternative approach
-- Never fabricate tool results - only use actual data returned
+### IMPORTANT RULES:
+1. For ANY question about current readings (temperature, location, battery,
+   compass, altitude, time), ALWAYS use a tool
+2. Respond with ONLY the JSON tool call, nothing else
+3. Do NOT say "I don't have access" - you DO have access via tools
+4. Do NOT provide generic advice - use the tools to get real data
+
+### Examples:
+- User: "What's the temperature?" → {{"tool": "get_temperature", "arguments": {{}}}}
+- User: "Where am I?" → {{"tool": "get_location", "arguments": {{}}}}
+- User: "Battery level?" → {{"tool": "get_battery_status", "arguments": {{}}}}
+- User: "What direction am I facing?" → {{"tool": "get_compass_heading", "arguments": {{}}}}
 """
 
 # Template for each tool in the list

@@ -182,6 +182,120 @@ class Phi3Runner(ModelRunner):
             )
         ]
 
+    def generate_with_tools(
+        self,
+        user_message: str,
+        tool_prompt: str,
+        conversation_history: list[dict[str, str]] | None = None,
+    ) -> str:
+        """Generate a response with tool awareness.
+
+        This method includes tool descriptions in the system prompt and is used
+        by the AgentController for agentic tool-using conversations.
+
+        Args:
+            user_message: The user's message.
+            tool_prompt: System prompt section describing available tools.
+            conversation_history: Previous messages in the conversation.
+
+        Returns:
+            The generated response text (may contain tool calls in JSON format).
+        """
+        if not self._ensure_loaded():
+            return f"[Model not available] You asked: {user_message}"
+
+        # For tool-aware generation, use a more focused system prompt
+        tool_system_prompt = f"""You are Waycore AI with access to device tools.
+{tool_prompt}
+
+CRITICAL: If the user asks about device data (temperature, location, battery,
+compass, time), respond with ONLY the tool call JSON. No other text."""
+
+        # Build message history
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": tool_system_prompt},
+        ]
+
+        # Add conversation history
+        if conversation_history:
+            for msg in conversation_history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+
+        # Add current user message
+        messages.append({"role": "user", "content": user_message})
+
+        logger.info(f"Tool-aware generation for: {user_message}")
+        logger.debug(f"System prompt length: {len(tool_system_prompt)}")
+
+        try:
+            response = self._llm.create_chat_completion(
+                messages=messages,
+                max_tokens=256,  # Shorter for tool calls
+                temperature=0.3,  # Lower temp for more deterministic tool calls
+                top_p=0.9,
+                stop=["<|end|>", "<|user|>"],
+            )
+
+            content: str = response["choices"][0]["message"]["content"]
+            logger.info(f"LLM response: {content[:200]}")
+            return content.strip()
+        except Exception as e:
+            logger.error(f"Phi-3 generation error: {e}")
+            return f"Error generating response: {e}"
+
+    def generate_final_response(
+        self,
+        user_message: str,
+        tool_results: str,
+        conversation_history: list[dict[str, str]] | None = None,
+    ) -> str:
+        """Generate final response after tool execution.
+
+        Args:
+            user_message: The original user message.
+            tool_results: Formatted results from tool execution.
+            conversation_history: Previous messages.
+
+        Returns:
+            Final response incorporating tool results.
+        """
+        if not self._ensure_loaded():
+            return tool_results  # Just return tool results if model unavailable
+
+        # Build prompt that includes tool results
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+        ]
+
+        # Add conversation history
+        if conversation_history:
+            for msg in conversation_history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+
+        # Add user message and tool results as context
+        combined_content = (
+            f"User question: {user_message}\n\n"
+            f"I retrieved the following information:\n{tool_results}\n\n"
+            f"Please provide a helpful response based on this information."
+        )
+        messages.append({"role": "user", "content": combined_content})
+
+        try:
+            response = self._llm.create_chat_completion(
+                messages=messages,
+                max_tokens=512,
+                temperature=0.7,
+                top_p=0.9,
+                stop=["<|end|>", "<|user|>"],
+            )
+
+            content: str = response["choices"][0]["message"]["content"]
+            return content.strip()
+        except Exception as e:
+            logger.error(f"Phi-3 final response error: {e}")
+            # Fall back to returning just the tool results
+            return tool_results
+
     def unload(self) -> None:
         """Unload the model to free memory."""
         if self._llm is not None:

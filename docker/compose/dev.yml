@@ -91,6 +91,13 @@ services:
       - AI_SERVICE_CONFIG=/app/device/services/ai_service/config/default.yaml
       - WAYCORE_MODEL_PATH=/opt/waycore/models
       - USE_UNIX_SOCKET=false  # Use HTTP for local dev (UI runs outside Docker)
+      - RAG_DATA_DIR=/app/data/outdoor  # Outdoor knowledge RAG data
+      - HF_HOME=/app/data/hf_cache  # HuggingFace cache for embedding model
+      # MCP Sensors: Connect to core-daemon for sensor data
+      - CORE_DAEMON_URL=http://core-daemon:8000
+      # MCP Actions: Connect to data-logger and comms-bridge
+      - DATA_LOGGER_URL=http://data-logger:8002
+      - COMMS_BRIDGE_URL=http://comms-bridge:8003
     ports:
       - "8010:8010"
     depends_on:
@@ -101,6 +108,8 @@ services:
       - waycore-sockets:/tmp/waycore
       - waycore-models:/opt/waycore/models  # Persistent model storage
       - waycore-data:/app/data  # AI database files
+      - ../../data/outdoor:/app/data/outdoor:ro  # Outdoor RAG knowledge base
+      - ../../data/hf_cache:/app/data/hf_cache:ro  # HuggingFace embedding model cache
 
   camera-service:
     build:

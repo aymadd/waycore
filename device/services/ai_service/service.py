@@ -98,8 +98,25 @@ class AIService(BaseService):
         connected = await self._mcp.connect_all(configs)
         logger.info(f"Connected to {connected} MCP servers")
 
-        # Create agent controller
-        self._agent = AgentController(mcp_manager=self._mcp)
+        # Get LLM runner for agent
+        from .models.runtime import registry as model_registry
+
+        phi3_runner = model_registry.get("phi3-mini")
+
+        # Create agent controller with LLM functions
+        generate_with_tools = getattr(phi3_runner, "generate_with_tools", None)
+        generate_final_response = getattr(phi3_runner, "generate_final_response", None)
+
+        if phi3_runner and generate_with_tools and generate_final_response:
+            self._agent = AgentController(
+                mcp_manager=self._mcp,
+                llm_generate=generate_with_tools,
+                llm_final_response=generate_final_response,
+            )
+            logger.info("Agent controller initialized with LLM support")
+        else:
+            self._agent = AgentController(mcp_manager=self._mcp)
+            logger.warning("Agent controller initialized without LLM support")
 
         # Log available tools
         tools = self._mcp.list_tools()

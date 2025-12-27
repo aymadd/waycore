@@ -25,6 +25,8 @@ python-multipart = "^0.0.9"  # Required for FastAPI file uploads
 mcp = "^1.0.0"  # Anthropic's Model Context Protocol for agentic AI
 chromadb = "^0.5"  # Vector database for RAG
 sentence-transformers = "^2.2"  # Local embeddings for RAG
+pymupdf = "^1.24"  # PDF parsing for RAG knowledge base
+hnswlib = "^0.8"  # Lightweight vector similarity search
 
 # UI dependencies (not installed in Docker - use: poetry install --with ui)
 [tool.poetry.group.ui]

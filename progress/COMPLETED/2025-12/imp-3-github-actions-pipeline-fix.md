@@ -122,6 +122,18 @@ discovery. Three distinct issues were identified:
 - `device/services/ai_service/tests/test_service.py` - Fixed temp directory
   usage
 
+### Additional Fix: Disk Space Issues (2025-12-27)
+
+8. **GitHub Actions runner out of disk space** - The `sentence-transformers`
+   package pulls in PyTorch (~2-3GB), causing the runner to run out of disk
+   space. Fixed by adding a "Free up disk space" step that removes unused
+   pre-installed software (Android SDK, .NET SDK, Haskell, CodeQL) before
+   installing dependencies. Also added Poetry dependency caching.
+
+Files modified:
+- `.github/workflows/test.yml` - Added disk cleanup and caching
+- `.github/workflows/lint.yml` - Added disk cleanup and caching
+
 ## Validation Commands
 
 ```bash

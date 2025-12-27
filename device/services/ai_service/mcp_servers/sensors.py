@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 server = Server("waycore-sensors")
 
 # Configuration - Core Daemon provides sensor and system data
-CORE_DAEMON_URL = os.getenv("CORE_DAEMON_URL", "http://localhost:8001")
+CORE_DAEMON_URL = os.getenv("CORE_DAEMON_URL", "http://localhost:8000")
 USE_MOCK_DATA = os.getenv("USE_MOCK_DATA", "false").lower() == "true"
 
 # HTTP client timeout for sensor requests

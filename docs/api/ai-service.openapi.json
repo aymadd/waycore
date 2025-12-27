@@ -268,6 +268,7 @@
   "paths": {
     "/api/chat": {
       "post": {
+        "description": "Chat endpoint with optional MCP tool support.\n\nRequest body:\n    question: str - The user's question\n    context: str - Optional context\n    model_id: str - Model to use (default: phi3-mini)\n    use_tools: bool - Enable MCP tools (default: true)\n    conversation_history: list - Previous messages\n\nReturns:\n    JSONResponse with response text and tool information",
         "operationId": "chat_api_chat_post",
         "requestBody": {
           "content": {
@@ -285,9 +286,7 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AIInferenceResponse"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"
@@ -946,6 +945,23 @@
           }
         },
         "summary": "Get Model Info"
+      }
+    },
+    "/debug/agent": {
+      "get": {
+        "description": "Debug endpoint to check agent and MCP status.",
+        "operationId": "debug_agent_debug_agent_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Debug Agent"
       }
     },
     "/health": {

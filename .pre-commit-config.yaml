@@ -42,16 +42,10 @@ repos:
     hooks:
       - id: generate-openapi
         name: Generate OpenAPI specs
-        entry: python scripts/generate-openapi.py
-        language: python
+        entry: poetry run python scripts/generate-openapi.py
+        language: system
         pass_filenames: false
         # Only trigger on API source files, not generated output
         files: ^device/services/.*/api\.py$
         # Exclude the generated spec files from triggering re-runs
         exclude: ^docs/api/
-        additional_dependencies:
-          - fastapi>=0.115
-          - pydantic>=2
-          - aiosqlite>=0.20
-          - pillow>=11.0
-          - python-multipart>=0.0.9

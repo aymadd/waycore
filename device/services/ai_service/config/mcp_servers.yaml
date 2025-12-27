@@ -30,13 +30,21 @@ servers:
       - delete_note
       - clear_conversation
 
-  # RAG (Retrieval Augmented Generation) server - disabled until implemented
-  # rag:
-  #   command: "python"
-  #   args: ["-m", "device.services.ai_service.mcp_servers.rag"]
-  #   description: "Documentation and knowledge base search"
-  #   enabled: false
-  #   timeout_seconds: 30  # RAG search may take longer
+  # RAG Documentation server
+  rag_docs:
+    command: "python"
+    args: ["-m", "device.services.ai_service.mcp_servers.rag_docs.server"]
+    description: "Waycore documentation search"
+    enabled: true
+    timeout_seconds: 30
+
+  # Outdoor Knowledge RAG server
+  outdoor_knowledge:
+    command: "python"
+    args: ["-m", "device.services.ai_service.mcp_servers.outdoor_knowledge.server"]
+    description: "Outdoor survival knowledge (plants, first aid, navigation, knots)"
+    enabled: true
+    timeout_seconds: 30
 
 # Default settings applied to all servers unless overridden
 defaults:

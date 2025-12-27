@@ -52,10 +52,17 @@ class MCPManager:
         logger.info(f"Connecting to MCP server: {config.name}")
 
         try:
+            # Merge parent environment with any custom config env
+            import os
+
+            subprocess_env = dict(os.environ)
+            if config.env:
+                subprocess_env.update(config.env)
+
             params = StdioServerParameters(
                 command=config.command,
                 args=config.args,
-                env=config.env,
+                env=subprocess_env,
             )
 
             # Start the subprocess and create session
