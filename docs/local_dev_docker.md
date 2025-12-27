@@ -154,6 +154,35 @@ The `dev-start.sh` script automatically downloads models if not present.
 
 See `docs/models/README.md` for detailed model management.
 
+## Knowledge Base Management
+
+The AI service uses a pre-built knowledge base for outdoor survival, navigation, and first aid topics.
+
+### Automatic Download
+
+The `dev-start.sh` script automatically downloads the knowledge base if not present.
+
+### Manual Download
+
+```bash
+# Download latest version
+./scripts/download-knowledge.sh
+
+# Download specific version
+./scripts/download-knowledge.sh --version v1.0.1
+
+# Verify installation
+./scripts/verify-knowledge.sh
+```
+
+### Check Status
+
+```bash
+./scripts/knowledge-info.sh
+```
+
+See `docs/knowledge-base.md` for detailed knowledge base management.
+
 ## Running the UI
 
 The Qt/QML frontend runs outside Docker:

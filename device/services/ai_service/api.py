@@ -116,6 +116,36 @@ def create_app(service: AIService) -> FastAPI:
             return {"status": "ok"}
         raise HTTPException(status_code=503, detail="not ready")
 
+    @app.get("/health/detailed")
+    async def health_detailed() -> dict[str, Any]:
+        """Get detailed health status including knowledge base and models."""
+        from device.libs.knowledge.manager import KnowledgeBaseManager
+
+        kb_manager = KnowledgeBaseManager()
+        kb_status = kb_manager.get_stats()
+
+        # Get model info
+        model_info: dict[str, Any] = {}
+        reg = _load_registry()
+        active = reg.get("active", {})
+        model_info["language"] = active.get("language")
+        model_info["vision"] = active.get("vision")
+
+        return {
+            "status": "ok" if service.is_healthy() else "degraded",
+            "knowledge_base": {
+                "version": kb_status.get("version"),
+                "installed": kb_status.get("installed"),
+                "integrity": kb_status.get("integrity"),
+                "update_available": kb_status.get("update_available"),
+            },
+            "models": model_info,
+            "mcp": {
+                "connected": service.mcp.is_connected if service.mcp else False,
+                "tool_count": len(service.mcp.list_tools()) if service.mcp else 0,
+            },
+        }
+
     @app.get("/debug/agent")
     async def debug_agent() -> JSONResponse:
         """Debug endpoint to check agent and MCP status."""

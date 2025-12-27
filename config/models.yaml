@@ -1,0 +1,115 @@
+# Waycore Vision Model Registry
+# Configuration for AI models with HuggingFace Hub integration
+version: "1.0"
+
+# Model profiles for different installation sizes
+profiles:
+  basic:
+    description: "Minimal install - general classification only"
+    models:
+      - mobilenet_v3
+
+  nature:
+    description: "Outdoor-focused - includes species classification"
+    models:
+      - mobilenet_v3
+      - efficientnet_inat
+
+  full:
+    description: "All models including embedding"
+    models:
+      - mobilenet_v3
+      - efficientnet_inat
+      - all_minilm
+
+# Model definitions
+models:
+  # Vision Models (TensorFlow Lite format)
+  mobilenet_v3:
+    name: "MobileNetV3 Small"
+    description: "Fast image classification for general objects (ImageNet)"
+    source: "direct"
+    download_url: "https://storage.googleapis.com/tfhub-lite-models/google/lite-model/imagenet/mobilenet_v3_small_100_224/classification/5/default/1.tflite"
+    filename: "mobilenet_v3_small.tflite"
+    labels_url: "https://storage.googleapis.com/download.tensorflow.org/data/ImageNetLabels.txt"
+    labels_filename: "imagenet_labels.txt"
+    format: tflite
+    classes: 1000
+    input_size: [224, 224]
+    size_mb: 5
+    use_case: "general"
+    local_path: "vision/mobilenet_v3_small.tflite"
+    local_labels: "labels/imagenet_labels.txt"
+
+  # EfficientNet for iNaturalist (nature classification)
+  # Note: Direct TFLite conversion needed; this is a placeholder
+  efficientnet_inat:
+    name: "EfficientNet iNaturalist"
+    description: "Species classification for wildlife and plants"
+    source: "huggingface"
+    repo_id: "timm/efficientnet_b0.ra_in1k"
+    filename: "efficientnet_b0_inat.tflite"
+    format: tflite
+    classes: 10000
+    input_size: [224, 224]
+    size_mb: 20
+    use_case: "nature"
+    # Safety metadata bundled with knowledge base
+    safety_metadata: "species_safety.json"
+    local_path: "vision/efficientnet_inat.tflite"
+
+  # Embedding model (already using HuggingFace)
+  all_minilm:
+    name: "all-MiniLM-L6-v2"
+    description: "Sentence embeddings for semantic search (384 dimensions)"
+    source: "huggingface"
+    repo_id: "sentence-transformers/all-MiniLM-L6-v2"
+    format: "sentence-transformers"
+    embedding_dim: 384
+    size_mb: 90
+    use_case: "embeddings"
+    # Uses sentence-transformers library, no manual download needed
+
+# Language Models (GGUF format - not from HuggingFace)
+language_models:
+  phi3_mini:
+    name: "Phi-3 Mini 4K"
+    description: "Microsoft Phi-3 Mini with 4K context, 4-bit quantized"
+    source: "huggingface"
+    repo_id: "microsoft/Phi-3-mini-4k-instruct-gguf"
+    filename: "Phi-3-mini-4k-instruct-q4.gguf"
+    format: gguf
+    context_length: 4096
+    size_mb: 2300
+    local_path: "language/phi-3-mini-4k-instruct.Q4_K_M.gguf"
+
+  tinyllama:
+    name: "TinyLlama 1.1B"
+    description: "Smaller, faster model for basic Q&A"
+    source: "huggingface"
+    repo_id: "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF"
+    filename: "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
+    format: gguf
+    context_length: 2048
+    size_mb: 800
+    local_path: "language/tinyllama-1.1b.Q4_K_M.gguf"
+
+# Model selection by context
+context_mapping:
+  # Outdoor/nature contexts prefer iNaturalist model
+  outdoor: efficientnet_inat
+  nature: efficientnet_inat
+  wildlife: efficientnet_inat
+  plants: efficientnet_inat
+  mushrooms: efficientnet_inat
+
+  # General contexts use MobileNet
+  general: mobilenet_v3
+  default: mobilenet_v3
+
+# Hardware limits (Raspberry Pi 5, 4GB RAM)
+limits:
+  max_active_language: 1
+  max_active_vision: 1
+  max_memory_mb: 3500
+  warn_memory_mb: 2500

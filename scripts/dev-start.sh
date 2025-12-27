@@ -84,6 +84,19 @@ download_models_if_needed() {
     fi
 }
 
+download_knowledge_if_needed() {
+    local kb_db="$PROJECT_ROOT/data/outdoor/knowledge.db"
+    local kb_idx="$PROJECT_ROOT/data/outdoor/knowledge.idx"
+
+    if [ ! -f "$kb_db" ] || [ ! -f "$kb_idx" ]; then
+        print_step "Downloading knowledge base (first-time setup)..."
+        "$SCRIPT_DIR/download-knowledge.sh"
+        print_success "Knowledge base downloaded"
+    else
+        print_success "Knowledge base already present"
+    fi
+}
+
 start_services() {
     print_step "Starting Docker services..."
 
@@ -176,6 +189,7 @@ check_poetry
 
 if [ "$SKIP_MODELS" = false ]; then
     download_models_if_needed
+    download_knowledge_if_needed
 fi
 
 start_services

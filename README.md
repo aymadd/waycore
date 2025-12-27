@@ -37,17 +37,18 @@ when the UI is busy or rebooting.
 
 ## Documentation
 
-| Document                                                  | Description                                                   |
-| --------------------------------------------------------- | ------------------------------------------------------------- |
-| [Vision](docs/vision.md)                                  | Full aspirational scope and long-term direction               |
-| [Overview](docs/overview.md)                              | Project scope, architecture decisions, and MVP definition     |
-| [Architecture](docs/architecture/architecture.md)         | Detailed software architecture, services, APIs, and standards |
-| [API Reference](docs/api/)                                | Auto-generated OpenAPI specifications for all services        |
-| [Database Schema](docs/database-schema.md)                | Database structure, tables, and data models                   |
-| [AI Model Guide](docs/models/README.md)                   | Model management, uploads, and supported formats              |
-| [Progress](progress/SUMMARY.md)                           | Current implementation status and task tracking               |
-| [Local Development](docs/local_dev_docker.md)             | Docker-based development setup and workflows                  |
-| [IPC Guide](local_plan/12-ipc-implementation-guide.md.md) | Inter-process communication strategy                          |
+| Document                                                       | Description                                                   |
+| -------------------------------------------------------------- | ------------------------------------------------------------- |
+| [Vision](docs/vision.md)                                       | Full aspirational scope and long-term direction               |
+| [Overview](docs/overview.md)                                   | Project scope, architecture decisions, and MVP definition     |
+| [Architecture](docs/architecture/architecture.md)              | Detailed software architecture, services, APIs, and standards |
+| [API Reference](docs/api/)                                     | Auto-generated OpenAPI specifications for all services        |
+| [Database Schema](docs/database-schema.md)                     | Database structure, tables, and data models                   |
+| [AI Model Guide](docs/models/README.md)                        | Model management, uploads, and supported formats              |
+| [Progress](progress/SUMMARY.md)                                | Current implementation status and task tracking               |
+| [Local Development](docs/local_dev_docker.md)                  | Docker-based development setup and workflows                  |
+| [IPC Guide](local_plan/12-ipc-implementation-guide.md.md)      | Inter-process communication strategy                          |
+| [Third-Party Attributions](docs/legal/third-party-attributions.md) | Licenses and attributions for dependencies and data sources  |
 
 ## Quick Start
 

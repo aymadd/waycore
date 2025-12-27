@@ -1,6 +1,10 @@
 #!/bin/bash
 # Download all public domain resources for Waycore RAG knowledge base.
 #
+# DEPRECATED: This script is for development of the waycore-knowledge repository.
+# For normal use, download the pre-built knowledge base instead:
+#   ./scripts/download-knowledge.sh
+#
 # Usage: ./scripts/download-rag-sources.sh [data_dir]
 #
 # This script downloads survival manuals, first aid guides, navigation resources,

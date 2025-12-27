@@ -1022,6 +1022,27 @@
         },
         "summary": "Health"
       }
+    },
+    "/health/detailed": {
+      "get": {
+        "description": "Get detailed health status including knowledge base and models.",
+        "operationId": "health_detailed_health_detailed_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Health Detailed Health Detailed Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Detailed"
+      }
     }
   },
   "servers": [

@@ -1,0 +1,53 @@
+# Waycore Knowledge Base Configuration
+# Configuration for the RAG knowledge base from waycore-knowledge releases
+version: "1.0"
+
+# Source repository
+repository:
+  name: "RAG Knowledge Base"
+  owner: "dmitry-grechko"
+  repo: "waycore-knowledge"
+  type: "github-release"
+
+# Target directory for knowledge base files
+storage:
+  target_dir: "data/outdoor"
+  lock_file: "data/knowledge.lock"
+
+# Required assets (must be present in release)
+required_assets:
+  - name: "knowledge.db"
+    description: "SQLite database with FTS5 index"
+    verify_checksum: true
+
+  - name: "knowledge.idx"
+    description: "Hnswlib vector index"
+    verify_checksum: true
+
+# Optional assets
+optional_assets:
+  - name: "manifest.json"
+    description: "Version and metadata"
+
+  - name: "species_safety.json"
+    description: "Species edibility and toxicity data"
+
+  - name: "sources.txt"
+    description: "List of source documents"
+
+# Update settings
+updates:
+  check_interval: "24h"  # How often to check for updates
+  auto_update: false     # Require explicit update command
+  offline_mode: false    # Skip network operations if true
+
+# Verification settings
+verification:
+  sha256_enabled: true
+  verify_on_startup: true
+
+# Fallback behavior
+fallback:
+  # Keep ability to build locally for development
+  allow_local_build: true
+  local_build_script: "scripts/build-rag-index.py"

@@ -27,9 +27,46 @@ AI_DB_PATH = os.getenv("AI_DB_PATH", "/app/data/ai.sqlite3")
 MODEL_DIR = Path(os.getenv("WAYCORE_MODEL_PATH", "/opt/waycore/models"))
 REGISTRY_FILE = MODEL_DIR / "registry.json"
 
+# Knowledge base path
+RAG_DATA_DIR = Path(os.getenv("RAG_DATA_DIR", "/app/data/outdoor"))
+
 # MCP configuration
 MCP_CONFIG_PATH = Path(__file__).parent / "config" / "mcp_servers.yaml"
 MCP_ENABLED = os.getenv("MCP_ENABLED", "true").lower() == "true"
+
+
+def _get_knowledge_base_info() -> dict[str, Any]:
+    """Get information about the installed knowledge base."""
+    info: dict[str, Any] = {
+        "installed": False,
+        "version": None,
+        "db_size_mb": 0,
+        "idx_size_mb": 0,
+    }
+
+    db_path = RAG_DATA_DIR / "knowledge.db"
+    idx_path = RAG_DATA_DIR / "knowledge.idx"
+    version_file = RAG_DATA_DIR / ".version"
+    manifest_file = RAG_DATA_DIR / "manifest.json"
+
+    if db_path.exists() and idx_path.exists():
+        info["installed"] = True
+        info["db_size_mb"] = round(db_path.stat().st_size / (1024 * 1024), 2)
+        info["idx_size_mb"] = round(idx_path.stat().st_size / (1024 * 1024), 2)
+
+        # Try to get version
+        if version_file.exists():
+            info["version"] = version_file.read_text().strip()
+        elif manifest_file.exists():
+            try:
+                with open(manifest_file) as f:
+                    manifest = json.load(f)
+                info["version"] = manifest.get("version")
+                info["entry_count"] = manifest.get("entry_count")
+            except Exception:
+                pass
+
+    return info
 
 
 class AIService(BaseService):
@@ -65,6 +102,16 @@ class AIService(BaseService):
         # Initialize database
         self._db = AIDatabase(AI_DB_PATH)
         await self._db.open()
+
+        # Log knowledge base status
+        kb_info = _get_knowledge_base_info()
+        if kb_info["installed"]:
+            version = kb_info.get("version", "unknown")
+            db_mb = kb_info.get("db_size_mb", 0)
+            idx_mb = kb_info.get("idx_size_mb", 0)
+            logger.info(f"Knowledge base: v{version} (db: {db_mb}MB, idx: {idx_mb}MB)")
+        else:
+            logger.warning("Knowledge base not found at %s", RAG_DATA_DIR)
 
         # Scan and register models on startup
         await self._sync_models_to_db()

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Build the complete RAG knowledge base from downloaded sources.
 
+DEPRECATED: This script is for development of the waycore-knowledge repository.
+For normal use, download the pre-built knowledge base instead:
+    ./scripts/download-knowledge.sh
+
 This script:
 1. Parses all downloaded PDFs and data files
 2. Generates embeddings for each entry

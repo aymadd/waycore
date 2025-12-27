@@ -116,6 +116,70 @@ poetry run pytest -q
 - Maximum line length: 100 characters
 - Use `from __future__ import annotations` in all Python files
 
+### Type Ignore Comments (CRITICAL)
+
+When using `# type: ignore` comments, you MUST specify the exact error codes being suppressed. Generic ignores cause CI failures when mypy versions differ.
+
+**❌ NEVER use bare type ignores:**
+```python
+@decorator()  # type: ignore
+@decorator()  # type: ignore[misc]  # Wrong if misc isn't the actual error
+```
+
+**✅ ALWAYS specify exact error codes:**
+```python
+@decorator()  # type: ignore[no-untyped-call, untyped-decorator]
+some_call()  # type: ignore[arg-type]
+```
+
+**Common mypy error codes in this project:**
+| Error Code | When It Occurs |
+|------------|----------------|
+| `no-untyped-call` | Calling a function without type hints |
+| `untyped-decorator` | Decorator makes function untyped |
+| `arg-type` | Wrong argument type |
+| `return-value` | Wrong return type |
+| `assignment` | Incompatible types in assignment |
+| `misc` | Miscellaneous errors (rarely the actual code) |
+
+**How to find the correct error code:**
+1. Run `poetry run mypy device/` locally
+2. Look at the error message - the code is in brackets: `[error-code]`
+3. Use that exact code in your type ignore comment
+
+**MCP Server decorators specifically require:**
+```python
+@server.list_tools()  # type: ignore[no-untyped-call, untyped-decorator]
+@server.call_tool()   # type: ignore[untyped-decorator]
+```
+
+### Pre-commit Validation (MANDATORY)
+
+Before considering ANY code change complete, you MUST run all validation commands and fix any errors:
+
+```bash
+# 1. Check formatting (must pass)
+poetry run black --check device/
+
+# 2. Check linting (must pass)
+poetry run ruff check device/
+
+# 3. Check types (must pass - this catches type: ignore issues!)
+poetry run mypy device/
+
+# 4. Run tests (must pass)
+poetry run pytest -q
+```
+
+**If mypy shows "Unused type: ignore comment" errors:**
+- The error code in your `# type: ignore[code]` doesn't match the actual error
+- Run mypy without the ignore to see the real error code
+- Update the ignore comment with the correct code(s)
+
+**If mypy shows errors "not covered by type: ignore comment":**
+- You're missing error codes in your type ignore
+- Add all the error codes shown in the mypy output
+
 ### QML Style
 
 - Use `App.Theme` for all colors, fonts, and spacing

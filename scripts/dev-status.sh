@@ -82,6 +82,26 @@ check_file "$MODEL_DIR/language/phi-3-mini-4k-instruct.Q4_K_M.gguf" "Phi-3 Mini 
 check_file "$MODEL_DIR/vision/mobilenet_v3_small.tflite" "MobileNetV3 (Vision)"
 check_file "$MODEL_DIR/labels/imagenet_labels.txt" "ImageNet Labels"
 
+# Knowledge Base
+print_section "Knowledge Base"
+KB_DIR="$PROJECT_ROOT/data/outdoor"
+if [ -f "$KB_DIR/knowledge.db" ]; then
+    db_size=$(du -h "$KB_DIR/knowledge.db" 2>/dev/null | cut -f1)
+    echo -e "  ${GREEN}●${NC} Database ${GRAY}($db_size)${NC}"
+else
+    echo -e "  ${RED}○${NC} Database ${GRAY}(not downloaded)${NC}"
+fi
+if [ -f "$KB_DIR/knowledge.idx" ]; then
+    idx_size=$(du -h "$KB_DIR/knowledge.idx" 2>/dev/null | cut -f1)
+    echo -e "  ${GREEN}●${NC} Vector Index ${GRAY}($idx_size)${NC}"
+else
+    echo -e "  ${RED}○${NC} Vector Index ${GRAY}(not downloaded)${NC}"
+fi
+if [ -f "$KB_DIR/.version" ]; then
+    version=$(cat "$KB_DIR/.version")
+    echo -e "  ${GRAY}Version: $version${NC}"
+fi
+
 # UI Process
 print_section "UI Application"
 if pgrep -f "python.*main.py" > /dev/null 2>&1; then
