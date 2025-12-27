@@ -197,11 +197,54 @@ Update the schema documentation when:
 
 ---
 
+## Software Manual Documentation (MANDATORY)
+
+When making changes to user-facing features, you MUST update the corresponding manual page in `docs/manual/`:
+
+### Trigger Conditions
+
+Update manual documentation when:
+- ✅ Adding new user-facing features
+- ✅ Changing how existing features work
+- ✅ Adding new apps or screens
+- ✅ Modifying settings or options
+- ✅ Changing keyboard shortcuts or gestures
+- ✅ Fixing user-visible bugs (update troubleshooting)
+
+### Update Checklist
+
+1. Find or create the relevant page in `docs/manual/`
+2. Update feature descriptions to match implementation
+3. Add screenshots or examples if helpful
+4. Update troubleshooting if relevant
+5. Check cross-references to other pages
+
+### Documentation Style
+
+- Write for non-technical users
+- Use step-by-step instructions
+- Include tips and common issues
+- Keep language simple and clear
+
+### Manual Structure
+
+| Directory | Content |
+|-----------|---------|
+| `docs/manual/README.md` | Manual index and navigation |
+| `docs/manual/getting-started.md` | First-time setup |
+| `docs/manual/apps/` | App-specific guides |
+| `docs/manual/features/` | Feature documentation |
+| `docs/manual/reference/` | Shortcuts, troubleshooting |
+
+---
+
 ## Reference Documents
 
 - Architecture: `docs/architecture/architecture.md`
 - API Specs: `docs/api/` (auto-generated OpenAPI specs)
 - Database Schema: `docs/database-schema.md`
+- User Manual: `docs/manual/` (user-facing documentation)
+- AI Model Guide: `docs/models/README.md`
 - Implementation phases: `local_plan/08-implementation-phases.md`
 - Progress tracking: `docs/ai_instructions/progress_tracking.md`
 - Design system: `local_plan/10-design-system.md`
