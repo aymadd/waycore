@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import pytest
+
 from device.libs.schemas.base import BaseMessage
 
 

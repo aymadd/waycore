@@ -3,6 +3,8 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError
+
 from device.libs.schemas.system import (
     CommandType,
     Severity,
@@ -11,7 +13,6 @@ from device.libs.schemas.system import (
     SystemMode,
     SystemStateChanged,
 )
-from pydantic import ValidationError
 
 
 def _valid_state_kwargs() -> dict:

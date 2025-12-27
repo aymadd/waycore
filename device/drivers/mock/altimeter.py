@@ -69,5 +69,6 @@ class MockAltimeter(ISensor):
 
 def register(_: object) -> None:
     """Register the mock altimeter driver with the factory."""
-    # Altimeter is currently used directly, not via factory
-    pass
+    from device.libs.hil.factory import DriverFactory
+
+    DriverFactory.register_sensor("mock_altimeter", lambda cfg: MockAltimeter(dict(cfg)))

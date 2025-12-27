@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+from device.libs.schemas.ai import InferenceType
+from device.services.ai_service.api import create_app
+from device.services.ai_service.service import AIService
 from fastapi.testclient import TestClient
-
-from ....libs.schemas.ai import InferenceType
-from ..api import create_app
-from ..service import AIService
 
 
 def test_inference_endpoint_sync() -> None:

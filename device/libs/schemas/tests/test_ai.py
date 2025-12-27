@@ -3,13 +3,14 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
+
 from device.libs.schemas.ai import (
     AIInferenceRequest,
     AIInferenceResponse,
     InferenceResult,
     InferenceType,
 )
-from pydantic import ValidationError
 
 
 def test_ai_inference_request_valid() -> None:

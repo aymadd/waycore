@@ -4,9 +4,8 @@ import base64
 from typing import Any
 
 import pytest
-
-from ....libs.schemas.ai import AIInferenceRequest, InferenceType
-from ..preprocessing import (
+from device.libs.schemas.ai import AIInferenceRequest, InferenceType
+from device.services.ai_service.preprocessing import (
     PreprocessingError,
     preprocess_for_inference,
 )

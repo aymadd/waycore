@@ -22,6 +22,9 @@ typing-extensions = "^4.12"
 requests-unixsocket = "^0.3.0"
 Pillow = "^11.0"
 python-multipart = "^0.0.9"  # Required for FastAPI file uploads
+mcp = "^1.0.0"  # Anthropic's Model Context Protocol for agentic AI
+chromadb = "^0.5"  # Vector database for RAG
+sentence-transformers = "^2.2"  # Local embeddings for RAG
 
 # UI dependencies (not installed in Docker - use: poetry install --with ui)
 [tool.poetry.group.ui]

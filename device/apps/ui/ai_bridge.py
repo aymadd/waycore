@@ -424,6 +424,11 @@ class AIBridge(QObject):
     chatCompleted = Signal(dict)  # Emitted when async chat completes
     imageClassifyCompleted = Signal(dict)  # Emitted when async image classify completes
 
+    # MCP Tool signals
+    toolConfirmationRequired = Signal(dict)  # Emitted when tool needs user confirmation
+    toolExecutionCompleted = Signal(dict)  # Emitted when tool execution finishes
+    toolProgressUpdate = Signal(dict)  # Emitted for streaming tool progress
+
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._client: AIServiceClient | None = None
@@ -435,6 +440,9 @@ class AIBridge(QObject):
         self._current_conversation_id: int | None = None
         self._db = AILocalDatabase()
         self._thread_pool = QThreadPool.globalInstance()
+
+        # MCP/Agent state
+        self._pending_tool_confirmations: dict[str, dict[str, Any]] = {}
 
         self._init_client()
 
@@ -968,3 +976,134 @@ class AIBridge(QObject):
     def _get_timestamp(self) -> str:
         """Get current ISO timestamp."""
         return datetime.now(timezone.utc).isoformat()
+
+    # MCP Tool Confirmation Methods
+
+    @Slot(str, "QVariant", str, str)  # type: ignore[arg-type]
+    def requestToolConfirmation(
+        self,
+        tool_name: str,
+        params: dict[str, Any],
+        warning: str = "",
+        description: str = "",
+    ) -> None:
+        """
+        Request user confirmation for a tool execution.
+
+        This is called by the AI service when a tool requires confirmation.
+
+        Args:
+            tool_name: Name of the tool to execute.
+            params: Tool parameters.
+            warning: Optional warning message.
+            description: Optional description of what the tool does.
+        """
+        confirmation_data = {
+            "tool_name": tool_name,
+            "params": params,
+            "warning": warning,
+            "description": description,
+        }
+        self._pending_tool_confirmations[tool_name] = confirmation_data
+        self.toolConfirmationRequired.emit(confirmation_data)
+
+    @Slot(str)  # type: ignore[arg-type]
+    def confirmTool(self, tool_name: str) -> None:
+        """
+        Confirm and execute a pending tool.
+
+        Args:
+            tool_name: Name of the tool to confirm.
+        """
+        if tool_name not in self._pending_tool_confirmations:
+            logger.warning(f"No pending confirmation for tool: {tool_name}")
+            self.toolExecutionCompleted.emit(
+                {"success": False, "tool": tool_name, "error": "No pending confirmation"}
+            )
+            return
+
+        confirmation_data = self._pending_tool_confirmations.pop(tool_name)
+        params = confirmation_data.get("params", {})
+
+        # Execute the tool via backend API
+        if self._backend_available and self._client:
+            try:
+                # Call the tool execution endpoint
+                result = self._client.post(
+                    "/api/tools/execute",
+                    json={"tool_name": tool_name, "arguments": params},
+                )
+                self.toolExecutionCompleted.emit(
+                    {"success": True, "tool": tool_name, "result": result}
+                )
+            except Exception as e:
+                logger.error(f"Tool execution failed: {e}")
+                self.toolExecutionCompleted.emit(
+                    {"success": False, "tool": tool_name, "error": str(e)}
+                )
+        else:
+            # Mock execution for development
+            logger.info(f"Mock tool execution: {tool_name} with params {params}")
+            self.toolExecutionCompleted.emit(
+                {"success": True, "tool": tool_name, "result": f"Executed {tool_name} (mock)"}
+            )
+
+    @Slot(str)  # type: ignore[arg-type]
+    def cancelTool(self, tool_name: str) -> None:
+        """
+        Cancel a pending tool confirmation.
+
+        Args:
+            tool_name: Name of the tool to cancel.
+        """
+        if tool_name in self._pending_tool_confirmations:
+            self._pending_tool_confirmations.pop(tool_name)
+            logger.info(f"Tool confirmation cancelled: {tool_name}")
+            self.toolExecutionCompleted.emit(
+                {"success": False, "tool": tool_name, "cancelled": True}
+            )
+
+    @Slot(result="QVariant")  # type: ignore[arg-type]
+    def getPendingToolConfirmations(self) -> list[dict[str, Any]]:
+        """
+        Get list of tools waiting for confirmation.
+
+        Returns:
+            List of pending confirmation data.
+        """
+        return list(self._pending_tool_confirmations.values())
+
+    @Slot(result="QVariant")  # type: ignore[arg-type]
+    def getAvailableTools(self) -> list[dict[str, Any]]:
+        """
+        Get list of available MCP tools.
+
+        Returns:
+            List of tool definitions.
+        """
+        if self._backend_available and self._client:
+            try:
+                result = self._client.get("/api/tools")
+                return result.get("tools", [])
+            except Exception as e:
+                logger.warning(f"Failed to get tools: {e}")
+                return []
+        else:
+            # Return mock tools for development
+            return [
+                {
+                    "name": "get_temperature",
+                    "description": "Get current temperature reading",
+                    "requires_confirmation": False,
+                },
+                {
+                    "name": "get_gps_location",
+                    "description": "Get current GPS coordinates",
+                    "requires_confirmation": False,
+                },
+                {
+                    "name": "send_mesh_message",
+                    "description": "Send a message over mesh network",
+                    "requires_confirmation": True,
+                },
+            ]

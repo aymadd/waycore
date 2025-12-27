@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+from device.services.ai_service.api import create_app
+from device.services.ai_service.service import AIService
 from fastapi.testclient import TestClient
-
-from ..api import create_app
-from ..service import AIService
 
 
 def test_image_classify_endpoint() -> None:

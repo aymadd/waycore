@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import pytest
-from device.libs.schemas.sensor import FixQuality, GPSPosition, SensorData, SensorStatus
 from pydantic import ValidationError
+
+from device.libs.schemas.sensor import FixQuality, GPSPosition, SensorData, SensorStatus
 
 
 def test_gps_position_valid() -> None:

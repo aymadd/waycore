@@ -12,8 +12,11 @@ from device.libs.database.ai import AIDatabase
 from device.libs.messaging.bus import MessageBus
 from device.libs.schemas.ai import AIInferenceRequest
 
+from .agent import AgentController
 from .engine import run_inference
+from .mcp import MCPManager, load_mcp_config
 from .preprocessing import PreprocessingError, preprocess_for_inference
+from .safety import add_safety_warning
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +27,10 @@ AI_DB_PATH = os.getenv("AI_DB_PATH", "/app/data/ai.sqlite3")
 MODEL_DIR = Path(os.getenv("WAYCORE_MODEL_PATH", "/opt/waycore/models"))
 REGISTRY_FILE = MODEL_DIR / "registry.json"
 
+# MCP configuration
+MCP_CONFIG_PATH = Path(__file__).parent / "config" / "mcp_servers.yaml"
+MCP_ENABLED = os.getenv("MCP_ENABLED", "true").lower() == "true"
+
 
 class AIService(BaseService):
     def __init__(self, config: dict[str, Any], bus: MessageBus | None = None) -> None:
@@ -33,6 +40,8 @@ class AIService(BaseService):
         self._idle_sleep_s = float(config.get("idle_sleep_seconds", 0.1))
         self._response_source = str(config.get("response_source", "ai-service"))
         self._db: AIDatabase | None = None
+        self._mcp: MCPManager | None = None
+        self._agent: AgentController | None = None
 
     @property
     def response_source(self) -> str:
@@ -42,6 +51,16 @@ class AIService(BaseService):
     def db(self) -> AIDatabase | None:
         return self._db
 
+    @property
+    def mcp(self) -> MCPManager | None:
+        """Get the MCP manager for tool access."""
+        return self._mcp
+
+    @property
+    def agent(self) -> AgentController | None:
+        """Get the agent controller for agentic AI capabilities."""
+        return self._agent
+
     async def _setup(self) -> None:
         # Initialize database
         self._db = AIDatabase(AI_DB_PATH)
@@ -50,9 +69,41 @@ class AIService(BaseService):
         # Scan and register models on startup
         await self._sync_models_to_db()
 
+        # Initialize MCP infrastructure for agentic AI
+        if MCP_ENABLED:
+            await self._setup_mcp()
+
         self._healthy = True
         if self.bus:
             self._unsubscribe = self.bus.subscribe("ai/inference/request", self._on_request)
+
+    async def _setup_mcp(self) -> None:
+        """Initialize MCP servers and agent controller."""
+        logger.info("Initializing MCP infrastructure...")
+
+        # Create MCP manager
+        self._mcp = MCPManager()
+
+        # Load server configurations
+        if MCP_CONFIG_PATH.exists():
+            configs = load_mcp_config(MCP_CONFIG_PATH)
+            logger.info(f"Loaded {len(configs)} MCP server configurations")
+        else:
+            logger.warning(f"MCP config not found at {MCP_CONFIG_PATH}, using defaults")
+            from .mcp.config import get_default_configs
+
+            configs = get_default_configs()
+
+        # Connect to MCP servers
+        connected = await self._mcp.connect_all(configs)
+        logger.info(f"Connected to {connected} MCP servers")
+
+        # Create agent controller
+        self._agent = AgentController(mcp_manager=self._mcp)
+
+        # Log available tools
+        tools = self._mcp.list_tools()
+        logger.info(f"MCP ready with {len(tools)} tools available")
 
     async def _sync_models_to_db(self) -> None:
         """Scan model directory and sync to database on startup."""
@@ -158,6 +209,17 @@ class AIService(BaseService):
                 self._unsubscribe()
             finally:
                 self._unsubscribe = None
+
+        # Close MCP connections
+        if self._mcp:
+            try:
+                await self._mcp.close_all()
+                logger.info("MCP servers closed")
+            except Exception as e:
+                logger.error(f"Error closing MCP servers: {e}")
+            self._mcp = None
+            self._agent = None
+
         if self._db:
             await self._db.close()
 
@@ -179,6 +241,14 @@ class AIService(BaseService):
             try:
                 pre = preprocess_for_inference(req)
                 resp = run_inference(req, pre, response_source=self._response_source)
+
+                # Add safety warnings for critical topics
+                if resp.success and resp.results:
+                    query_text = req.prompt if hasattr(req, "prompt") else ""
+                    for result in resp.results:
+                        if hasattr(result, "text") and result.text:
+                            result.text = add_safety_warning(result.text, query_text)
+
             except PreprocessingError as exc:
                 from device.libs.schemas.ai import AIInferenceResponse
 

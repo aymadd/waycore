@@ -105,5 +105,6 @@ class MockGPS(IGPS):
 
 def register(_: object) -> None:
     """Register the mock GPS driver with the factory."""
-    # GPS is currently used directly, not via factory
-    pass
+    from device.libs.hil.factory import DriverFactory
+
+    DriverFactory.register_gps("mock", lambda cfg: MockGPS(dict(cfg)))

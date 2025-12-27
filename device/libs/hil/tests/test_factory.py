@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 import pytest
+
 from device.libs.hil.factory import DriverFactory
 from device.libs.hil.interfaces.gps import IGPS
 from device.libs.hil.interfaces.module_port import IModulePort
@@ -15,31 +16,29 @@ from device.libs.hil.interfaces.sensor import ISensor
 # Minimal dummy implementations to test factory wiring
 class DummyGPS(IGPS):
     def __init__(self, _config: Mapping[str, Any]) -> None:
-        self._running = False
+        self._ready = False
         self._has_fix = False
 
     @property
-    def is_running(self) -> bool:
-        return self._running
+    def is_ready(self) -> bool:
+        return self._ready
 
     @property
     def has_fix(self) -> bool:
         return self._has_fix
 
-    async def start(self) -> None:
-        self._running = True
+    async def initialize(self) -> bool:
+        self._ready = True
+        return True
 
-    async def stop(self) -> None:
-        self._running = False
-
-    async def get_position(self):
+    async def read(self):  # type: ignore[no-untyped-def]
         return None
 
-    def subscribe_position(self, callback):  # type: ignore[no-untyped-def]
-        return None
+    async def start_tracking(self) -> bool:
+        return True
 
-    async def wait_for_fix(self, timeout_seconds: float = 60.0) -> bool:
-        return False
+    async def stop_tracking(self) -> None:
+        pass
 
 
 class DummyRadio(IRadio):

@@ -3,18 +3,31 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
-from device.libs.hil.interfaces.gps import IGPS, GPSFix
+
+from device.libs.hil.interfaces.gps import IGPS, GPSReading
 from device.libs.hil.interfaces.module_port import IModulePort
 from device.libs.hil.interfaces.power import BatteryInfo, IPowerController, PowerBudget
 from device.libs.hil.interfaces.radio import IRadio, RadioStatus, RadioType, ReceivedMessage
 from device.libs.hil.interfaces.sensor import ISensor
 
 
-def test_gpsfix_dataclass_fields() -> None:
+def test_gpsreading_dataclass_fields() -> None:
     now = datetime.now(timezone.utc)
-    fix = GPSFix(timestamp=now, latitude=1.0, longitude=2.0, satellites=5)
-    assert fix.timestamp == now
-    assert fix.satellites == 5
+    from device.libs.hil.interfaces.gps import GPSFixType
+
+    reading = GPSReading(
+        timestamp=now,
+        latitude=1.0,
+        longitude=2.0,
+        altitude_m=100.0,
+        speed_mps=0.0,
+        heading=0.0,
+        accuracy_m=5.0,
+        fix_type=GPSFixType.fix_3d,
+        satellites=5,
+    )
+    assert reading.timestamp == now
+    assert reading.satellites == 5
 
 
 def test_iradio_status_and_message_dataclasses() -> None:

@@ -4,6 +4,7 @@ import json
 from uuid import uuid4
 
 import pytest
+
 from device.libs.database import AsyncSQLite
 from device.libs.schemas.ai import AIInferenceResponse, InferenceResult, InferenceType
 

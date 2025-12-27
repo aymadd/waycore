@@ -1,0 +1,44 @@
+# MCP Server Configuration for AI Service
+#
+# This file defines the MCP (Model Context Protocol) servers that the AI service
+# will connect to for tool access. Each server runs as a subprocess and
+# communicates via stdio.
+#
+# Transport: All servers use stdio (subprocess) transport for zero-latency
+# local communication.
+
+servers:
+  # Sensor data access server
+  sensors:
+    command: "python"
+    args: ["-m", "device.services.ai_service.mcp_servers.sensors"]
+    description: "Device sensor data access (temperature, GPS, compass, etc.)"
+    enabled: true
+    timeout_seconds: 5  # Sensors should respond quickly
+
+  # Device actions server
+  actions:
+    command: "python"
+    args: ["-m", "device.services.ai_service.mcp_servers.actions"]
+    description: "Device actions (notes, mesh messages, settings)"
+    enabled: true
+    timeout_seconds: 10
+    # Tools that require user confirmation before execution
+    requires_confirmation:
+      - send_mesh_message
+      - factory_reset
+      - delete_note
+      - clear_conversation
+
+  # RAG (Retrieval Augmented Generation) server - disabled until implemented
+  # rag:
+  #   command: "python"
+  #   args: ["-m", "device.services.ai_service.mcp_servers.rag"]
+  #   description: "Documentation and knowledge base search"
+  #   enabled: false
+  #   timeout_seconds: 30  # RAG search may take longer
+
+# Default settings applied to all servers unless overridden
+defaults:
+  timeout_seconds: 10
+  enabled: true

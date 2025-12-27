@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 
 import pytest
+
 from device.libs.messaging.bus import MessageBus
 
 

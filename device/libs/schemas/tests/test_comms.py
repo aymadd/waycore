@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
+
 from device.libs.schemas.comms import (
     CommsStatusChanged,
     MessageReceived,
@@ -8,7 +10,6 @@ from device.libs.schemas.comms import (
     SendMessageRequest,
     Transport,
 )
-from pydantic import ValidationError
 
 
 def test_message_received_valid_lora() -> None:

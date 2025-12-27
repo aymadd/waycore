@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import base64
 
-from ....libs.schemas.ai import AIInferenceRequest, InferenceType
-from ..engine import run_inference
-from ..preprocessing import preprocess_for_inference
+from device.libs.schemas.ai import AIInferenceRequest, InferenceType
+from device.services.ai_service.engine import run_inference
+from device.services.ai_service.preprocessing import preprocess_for_inference
 
 
 def _mk_req(model_id: str, inference_type: InferenceType, input_data: dict) -> AIInferenceRequest:  # type: ignore[no-redeclare]

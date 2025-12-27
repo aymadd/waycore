@@ -9,3 +9,4 @@ LoadingIndicator 1.0 LoadingIndicator.qml
 SignalBars 1.0 SignalBars.qml
 TextField 1.0 TextField.qml
 Toast 1.0 Toast.qml
+ToolConfirmationDialog 1.0 ToolConfirmationDialog.qml

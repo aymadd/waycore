@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 from .base import BaseMessage
 
@@ -47,13 +47,9 @@ class AIInferenceResponse(BaseMessage):
     success: bool = Field(..., description="Whether inference succeeded")
     error_message: str | None = Field(default=None, description="Error if any")
 
-    @field_validator("error_message")
-    @classmethod
-    def _error_message_present_when_failed(
-        cls, value: str | None, info: ValidationInfo
-    ) -> str | None:
-        success: bool = info.data.get("success", True)
-        if not success and (value is None or value.strip() == ""):
+    @model_validator(mode="after")
+    def _error_message_present_when_failed(self) -> AIInferenceResponse:
+        if not self.success and (self.error_message is None or self.error_message.strip() == ""):
             msg = "error_message must be provided when success is False"
             raise ValueError(msg)
-        return value
+        return self

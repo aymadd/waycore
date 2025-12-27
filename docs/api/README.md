@@ -9,7 +9,6 @@ Auto-generated OpenAPI specifications for all Waycore services.
 | core-daemon | 8001 | [core-daemon.openapi.json](./core-daemon.openapi.json) |
 | comms-bridge | 8003 | [comms-bridge.openapi.json](./comms-bridge.openapi.json) |
 | data-logger | 8002 | [data-logger.openapi.json](./data-logger.openapi.json) |
-| ai-service | 8004 | [ai-service.openapi.json](./ai-service.openapi.json) |
 | module-manager | 8005 | [module-manager.openapi.json](./module-manager.openapi.json) |
 | camera-service | 8006 | [camera-service.openapi.json](./camera-service.openapi.json) |
 

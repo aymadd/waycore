@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 import pytest
+
 from device.libs.common.base_service import BaseService
 
 
