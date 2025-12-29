@@ -30,6 +30,28 @@ def main() -> None:
     completed = sum(count_tasks(p) for p in (PROGRESS / "COMPLETED").glob("*") if p.is_dir())
     blocked = count_tasks(PROGRESS / "BLOCKED")
     total = todo + in_prog + completed + blocked
+
+    # Calculate Localization Progress
+    # Convention: English files are *.md (excluding *_AR.md), Arabic files are *_AR.md
+    docs_dir = ROOT / "docs"
+    
+    # Get all markdown files in docs/ recursively + root READMEs
+    all_md_docs = list(docs_dir.rglob("*.md"))
+    if (ROOT / "README.md").exists():
+        all_md_docs.append(ROOT / "README.md")
+
+    english_files = {f for f in all_md_docs if not f.name.endswith("_AR.md")}
+    arabic_files = {f for f in all_md_docs if f.name.endswith("_AR.md") or (f.parent / f"{f.stem}_AR.md").exists()}
+    
+    # Check for root README specifically
+    if (ROOT / "README_AR.md").exists():
+        arabic_files.add(ROOT / "README.md") # Count the source as "covered"
+
+    total_docs = len(english_files)
+    total_translated = len(arabic_files.intersection(english_files)) # Files that have a corresponding translation
+    
+    ar_percent = (total_translated / total_docs * 100) if total_docs > 0 else 0
+
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     summary = PROGRESS / "SUMMARY.md"
     summary.write_text(
@@ -50,6 +72,11 @@ def main() -> None:
         f"| Prod-phase tasks | {prod_phase_todo} |\n"
         f"| Improvements | {improvements_todo} |\n"
         f"| Ideas | {ideas_todo} |\n\n"
+        f"## Localization Progress\n\n"
+        f"| Language | Coverage | Files |\n"
+        f"|----------|----------|-------|\n"
+        f"| English  | 100%     | {total_docs} |\n"
+        f"| Arabic   | {ar_percent:.1f}%    | {total_translated}/{total_docs} |\n\n"
         f"## Current Focus\n\n"
         f"See `progress/IN_PROGRESS/`\n",
         encoding="utf-8",
